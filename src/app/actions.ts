@@ -5,6 +5,12 @@ import { getAdminPasscode, setAdminPasscode } from '@/lib/storage';
 
 export async function verifyAdminPasscode(passcode: string): Promise<boolean> {
   const serverPasscode = await getAdminPasscode();
+  console.log('驗證管理員密碼:', {
+    inputPasscode: passcode,
+    serverPasscode: serverPasscode,
+    isMatch: passcode === serverPasscode,
+    envPasscode: process.env.ADMIN_PASSCODE
+  });
   return passcode === serverPasscode;
 }
 
