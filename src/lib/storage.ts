@@ -39,6 +39,12 @@ function parseTransaction(row: any): Transaction {
 
 // --- Admin Passcode Functions ---
 export const getAdminPasscode = unstable_cache(async (): Promise<string> => {
+    // 直接使用環境變量中的管理員密碼
+    if (process.env.ADMIN_PASSCODE) {
+        return process.env.ADMIN_PASSCODE;
+    }
+    
+    // 如果環境變量未設置，則嘗試從 Google Sheet 讀取（保留原有邏輯以向後兼容）
     try {
         const projectsSheet = await getProjectsSheet();
         if (projectsSheet) {
@@ -50,11 +56,11 @@ export const getAdminPasscode = unstable_cache(async (): Promise<string> => {
             }
         }
     } catch (error) {
-        console.error("Could not fetch admin passcode from sheet, falling back to env.", error);
+        console.error("Could not fetch admin passcode from sheet.", error);
     }
     
-    // Fallback to environment variable if not found in sheet or if sheet fails
-    return process.env.ADMIN_PASSCODE || "00000000";
+    // 如果都失敗，則返回默認值
+    return "00000000";
 }, 
 ['admin_passcode'], 
 { tags: ['admin_passcode'] });
