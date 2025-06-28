@@ -1,0 +1,188 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 45 71% 97%; /* Warm light beige from screenshot */
+    --foreground: 30 10% 25%; /* Dark Gray-Brown for text */
+
+    --card: 0 0% 100%; /* White cards from screenshot */
+    --card-foreground: var(--foreground);
+
+    --popover: 0 0% 100%;
+    --popover-foreground: var(--foreground);
+
+    --primary: 346 74% 83%; /* Soft Pink from screenshot buttons */
+    --primary-foreground: 346 50% 25%; /* Darker pink for text on primary */
+
+    --secondary: 45 80% 90%; /* Light yellow for secondary elements */
+    --secondary-foreground: 45 40% 30%;
+
+    --muted: 60 30% 90%;
+    --muted-foreground: 60 10% 45%;
+
+    --accent: 45 80% 95%; /* Very light yellow for hover */
+    --accent-foreground: 45 40% 30%;
+
+    --destructive: 356 72% 62%; /* Soft Red from screenshot header border */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 0 0% 100%; /* Input background */
+    --ring: 220 13% 91%;
+
+    --radius: 0.5rem;
+
+    /* Chart/Stat Colors from screenshot */
+    --chart-1: 120 37% 77%; /* income green */
+    --chart-1-darker: 120 37% 62%;
+    --chart-2: 340 82% 76%; /* expense pink */
+    --chart-2-darker: 340 82% 61%;
+    --chart-3: 199 57% 79%; /* balance blue: #a8d8e9 */
+    --chart-3-darker: 199 57% 50%;
+    --chart-4: 41 92% 74%; /* attendees yellow: #f9d580 */
+    --chart-4-darker: 41 92% 54%;
+    --chart-5: 240 100% 92%;
+
+    /* Custom colors from screenshot */
+    --header-border: 356 72% 62%;
+    --stat-income: 120 37% 70%;
+    --stat-expense: 340 82% 76%;
+    --stat-balance: 199 57% 79%;
+    --stat-attendees: 41 92% 74%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Custom button colors for header */
+    --button-add-bg: 220 80% 96%;
+    --button-add-fg: 220 60% 60%;
+    --button-add-border: 220 80% 92%;
+    --button-back-bg: 255 60% 95%;
+    --button-back-fg: 255 40% 50%;
+    --button-back-border: 255 60% 90%;
+    --button-logout-bg: 39 100% 95%;
+    --button-logout-fg: 30 70% 50%;
+    --button-logout-border: 39 100% 90%;
+    --button-exit-bg: 356 80% 96%;
+    --button-exit-fg: 356 60% 60%;
+    --button-exit-border: 356 80% 92%;
+  }
+
+  .dark {
+    --background: 240 10% 10%;
+    --foreground: 60 30% 92%;
+
+    --card: 240 10% 15%;
+    --card-foreground: var(--foreground);
+
+    --popover: 240 10% 12%;
+    --popover-foreground: var(--foreground);
+
+    --primary: 346 74% 70%;
+    --primary-foreground: 346 50% 15%;
+
+    --secondary: 45 40% 75%;
+    --secondary-foreground: 45 30% 20%;
+
+    --muted: 240 10% 25%;
+    --muted-foreground: 60 20% 65%;
+
+    --accent: 45 40% 80%;
+    --accent-foreground: 45 50% 20%;
+
+    --destructive: 356 60% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 240 10% 30%;
+    --input: 240 10% 20%;
+    --ring: 240 10% 40%;
+
+    --chart-1: 120 37% 65%;
+    --chart-1-darker: 120 37% 75%;
+    --chart-2: 340 82% 71%;
+    --chart-2-darker: 340 82% 81%;
+    --chart-3: 199 57% 69%;
+    --chart-3-darker: 199 57% 79%;
+    --chart-4: 41 92% 64%;
+    --chart-4-darker: 41 92% 74%;
+    --chart-5: 240 80% 78%;
+
+    --header-border: 356 72% 52%;
+    --stat-income: 120 37% 65%;
+    --stat-expense: 340 82% 71%;
+    --stat-balance: 199 57% 69%;
+    --stat-attendees: 41 92% 64%;
+
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Custom button colors for header - dark mode */
+    --button-add-bg: 220 30% 25%;
+    --button-add-fg: 220 70% 80%;
+    --button-add-border: 220 30% 35%;
+    --button-back-bg: 255 20% 20%;
+    --button-back-fg: 255 60% 85%;
+    --button-back-border: 255 20% 30%;
+    --button-logout-bg: 39 25% 20%;
+    --button-logout-fg: 39 80% 80%;
+    --button-logout-border: 39 25% 30%;
+    --button-exit-bg: 356 30% 25%;
+    --button-exit-fg: 356 70% 80%;
+    --button-exit-border: 356 30% 35%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .paper-tape-decorator {
+    @apply relative;
+    --tape-color: hsla(var(--chart-3) / 0.6); /* Default: blue tape */
+  }
+
+  .paper-tape-decorator::before,
+  .paper-tape-decorator::after {
+    content: '';
+    @apply absolute w-10 h-6 shadow-sm pointer-events-none z-10;
+    border: 1px solid hsla(var(--foreground) / 0.1);
+    background-color: var(--tape-color);
+  }
+  
+  .paper-tape-top-left::before {
+    @apply top-[-0.75rem] left-[-0.75rem] -rotate-45;
+  }
+  
+  .paper-tape-top-right::after {
+    @apply top-[-0.75rem] right-[-0.75rem] rotate-45;
+  }
+  
+  .paper-tape-bottom-left::before {
+    @apply bottom-[-0.75rem] left-[-0.75rem] rotate-45;
+  }
+
+  .paper-tape-bottom-right::after {
+    @apply bottom-[-0.75rem] right-[-0.75rem] -rotate-45;
+  }
+}
