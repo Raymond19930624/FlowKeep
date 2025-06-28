@@ -52,9 +52,14 @@ export const getAdminPasscode = unstable_cache(async (): Promise<string> => {
             throw new Error('在 Google Sheet 中找不到管理員密碼設定');
         }
         
-        const passcode = String(configRow.get('passcode'));
+        let passcode = String(configRow.get('passcode'));
         if (!passcode) {
             throw new Error('管理員密碼為空');
+        }
+        
+        // 移除可能的前導單引號（如果有的話）
+        if (passcode.startsWith("'")) {
+            passcode = passcode.substring(1);
         }
         
         console.log('從 Google Sheet 讀取到的管理員密碼:', passcode);
@@ -76,14 +81,17 @@ export async function setAdminPasscode(newPasscode: string): Promise<void> {
     const rows = await projectsSheet.getRows();
     const configRow = rows.find(row => row.get('id') === ADMIN_CONFIG_ID);
 
+    // 在密碼前添加單引號，確保它被視為文本
+    const passcodeAsText = `'${newPasscode}`;
+
     if (configRow) {
-        configRow.set('passcode', newPasscode);
+        configRow.set('passcode', passcodeAsText);
         await configRow.save();
     } else {
         await projectsSheet.addRow({
             id: ADMIN_CONFIG_ID,
             name: 'SYSTEM_ADMIN_CONFIG',
-            passcode: newPasscode,
+            passcode: passcodeAsText,
         });
     }
     revalidateTag('admin_passcode');
