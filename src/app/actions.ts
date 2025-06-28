@@ -4,14 +4,21 @@
 import { getAdminPasscode, setAdminPasscode } from '@/lib/storage';
 
 export async function verifyAdminPasscode(passcode: string): Promise<boolean> {
-  const serverPasscode = await getAdminPasscode();
-  console.log('驗證管理員密碼:', {
-    inputPasscode: passcode,
-    serverPasscode: serverPasscode,
-    isMatch: passcode === serverPasscode,
-    envPasscode: process.env.ADMIN_PASSCODE
-  });
-  return passcode === serverPasscode;
+  try {
+    const serverPasscode = await getAdminPasscode();
+    const isMatch = passcode === serverPasscode;
+    
+    console.log('驗證管理員密碼:', {
+      inputPasscode: passcode,
+      serverPasscode: serverPasscode,
+      isMatch: isMatch
+    });
+    
+    return isMatch;
+  } catch (error) {
+    console.error('驗證管理員密碼時發生錯誤:', error);
+    return false; // 發生錯誤時拒絕登入
+  }
 }
 
 export async function changeAdminPasscode(data: { currentPasscode: string; newPasscode: string; }): Promise<{ success: boolean; message: string; }> {

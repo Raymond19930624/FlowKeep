@@ -39,28 +39,30 @@ function parseTransaction(row: any): Transaction {
 
 // --- Admin Passcode Functions ---
 export const getAdminPasscode = unstable_cache(async (): Promise<string> => {
-    // 直接使用環境變量中的管理員密碼
-    if (process.env.ADMIN_PASSCODE) {
-        return process.env.ADMIN_PASSCODE;
-    }
-    
-    // 如果環境變量未設置，則嘗試從 Google Sheet 讀取（保留原有邏輯以向後兼容）
     try {
         const projectsSheet = await getProjectsSheet();
-        if (projectsSheet) {
-            const rows = await projectsSheet.getRows();
-            const configRow = rows.find(row => row.get('id') === ADMIN_CONFIG_ID);
-
-            if (configRow && configRow.get('passcode')) {
-                return String(configRow.get('passcode'));
-            }
+        if (!projectsSheet) {
+            throw new Error('無法載入 Google Sheet');
         }
+        
+        const rows = await projectsSheet.getRows();
+        const configRow = rows.find(row => row.get('id') === ADMIN_CONFIG_ID);
+
+        if (!configRow || !configRow.get('passcode')) {
+            throw new Error('在 Google Sheet 中找不到管理員密碼設定');
+        }
+        
+        const passcode = String(configRow.get('passcode'));
+        if (!passcode) {
+            throw new Error('管理員密碼為空');
+        }
+        
+        console.log('從 Google Sheet 讀取到的管理員密碼:', passcode);
+        return passcode;
     } catch (error) {
-        console.error("Could not fetch admin passcode from sheet.", error);
+        console.error('讀取管理員密碼時發生錯誤:', error);
+        throw new Error('無法讀取管理員密碼，請檢查 Google Sheet 設定');
     }
-    
-    // 如果都失敗，則返回默認值
-    return "00000000";
 }, 
 ['admin_passcode'], 
 { tags: ['admin_passcode'] });
