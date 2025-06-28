@@ -3,40 +3,24 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  @font-face {
-    font-family: 'Kiwi Maru';
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-    src: url(https://fonts.gstatic.com/s/kiwimaru/v14/b8cVSCudb0qjIMdMSC0U3WNo.woff2) format('woff2');
-    unicode-range: U+3000-303F, U+FF00-FFEF, U+4E00-9FFF, U+20000-2A6DF, U+2A700-2B73F, U+2B740-2B81F, U+2B820-2CEAF, U+2CEB0-2EBEF, U+2F800-2FA1F;
+/* 定義字體堆疊 */
+:root {
+  --font-kiwi: 'Kiwi Maru', 'Noto Sans TC', sans-serif;
+  --font-sans: 'Noto Sans TC', sans-serif;
+}
+
+/* 應用字體到標題 */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-kiwi);
+  /* 強制使用 Kiwi Maru，如果字元不可用則回退到 Noto Sans TC */
+  @supports (font-variation-settings: normal) {
+    font-family: 'Kiwi Maru', 'Noto Sans TC', sans-serif;
   }
-  
-  @font-face {
-    font-family: 'Kiwi Maru';
-    font-style: normal;
-    font-weight: 500;
-    font-display: swap;
-    src: url(https://fonts.gstatic.com/s/kiwimaru/v14/b8cVSCudb0qjIMdMSC0U3WNo.woff2) format('woff2');
-    unicode-range: U+3000-303F, U+FF00-FFEF, U+4E00-9FFF, U+20000-2A6DF, U+2A700-2B73F, U+2B740-2B81F, U+2B820-2CEAF, U+2CEB0-2EBEF, U+2F800-2FA1F;
-  }
-  
-  /* 定義字體變數 */
-  :root {
-    --font-kiwi: 'Kiwi Maru', 'Noto Sans TC', sans-serif;
-    --font-sans: 'Noto Sans TC', sans-serif;
-  }
-  
-  /* 應用字體到標題 */
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-kiwi);
-  }
-  
-  /* 確保其他文字使用 Noto Sans TC */
-  body {
-    font-family: var(--font-sans);
-  }
+}
+
+/* 確保其他文字使用 Noto Sans TC */
+body {
+  font-family: var(--font-sans);
 }
 
 @layer base {
