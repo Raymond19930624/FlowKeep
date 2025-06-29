@@ -3,16 +3,24 @@
 import { unstable_cache, revalidateTag } from 'next/cache';
 import { getProjectsSheet, getTransactionsSheet } from './google-sheets';
 import type { Project, Transaction, ProjectData, TransactionData } from './types';
+import { isTextFullySupported } from './font-utils';
 
 const ADMIN_CONFIG_ID = '__ADMIN_CONFIG__';
 
 // --- Helper Functions for Data Parsing ---
-function parseProject(row: any): Project {
+async function parseProject(row: any): Promise<Project> {
+    const name = row.get('name') as string;
+    const useKiwiMaru = row.get('useKiwiMaru') === 'TRUE';
+    
+    // 檢查名稱是否完全支援 Kiwi Maru 字體
+    const kiwiMaruSupported = useKiwiMaru ? await isTextFullySupported(name) : false;
+    
     return {
         id: row.get('id') as string,
-        name: row.get('name') as string,
+        name,
         passcode: String(row.get('passcode') || ''),
-        useKiwiMaru: row.get('useKiwiMaru') === 'TRUE',
+        useKiwiMaru,
+        kiwiMaruSupported,
         commonIncomeItems: (row.get('commonIncomeItems') as string || '').split(',').filter(Boolean),
         commonExpenseItems: (row.get('commonExpenseItems') as string || '').split(',').filter(Boolean),
         transactions: [], // This will be populated separately
@@ -22,9 +30,11 @@ function parseProject(row: any): Project {
 function parseTransaction(row: any): Transaction {
     const amountStr = row.get('amount');
     const countStr = row.get('count');
-    return {
+    const projectId = row.get('projectId') as string;
+    
+    const transaction: Transaction = {
         id: row.get('id') as string,
-        projectId: row.get('projectId') as string,
+        projectId,
         type: row.get('type') as 'income' | 'expense',
         date: row.get('date') as string,
         person: row.get('person') as string,
@@ -34,6 +44,8 @@ function parseTransaction(row: any): Transaction {
         count: countStr ? parseInt(countStr, 10) : undefined,
         voucherType: row.get('voucherType') as '發票' | '收據' | '其他' | undefined,
     };
+    
+    return transaction;
 }
 
 
@@ -102,57 +114,127 @@ export async function setAdminPasscode(newPasscode: string): Promise<void> {
 // --- Project Functions ---
 export const getProjects = unstable_cache(async (): Promise<Project[]> => {
     const projectsSheet = await getProjectsSheet();
-    const transactionsSheet = await getTransactionsSheet();
-    
-    if (!projectsSheet || !transactionsSheet) {
-        console.warn("Build Warning: Could not access Google Sheets. Returning empty project list.");
-        return [];
+    if (!projectsSheet) {
+        throw new Error("Google Sheets is not configured on the server.");
     }
-    
-    const projectRows = await projectsSheet.getRows();
-    const transactionRows = await transactionsSheet.getRows();
 
-    const allTransactions = transactionRows.map(parseTransaction);
+    const rows = await projectsSheet.getRows();
+    const projectPromises = rows.map(row => parseProject(row));
+    const projects = await Promise.all(projectPromises);
     
-    const projects = projectRows
-      .filter(row => row.get('id') !== ADMIN_CONFIG_ID)
-      .map(row => {
-        const project = parseProject(row);
-        project.transactions = allTransactions.filter(t => t.projectId === project.id);
-        return project;
-    });
-
-    return projects;
+    // 過濾掉管理員配置行
+    return projects.filter(project => project.id !== ADMIN_CONFIG_ID);
 }, ['projects'], { tags: ['projects'] });
 
 export async function getProjectById(projectId: string): Promise<Project | null> {
     const projects = await getProjects();
-    return projects.find(p => p.id === projectId) || null;
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return null;
+    
+    // 獲取該項目的交易記錄
+    // 獲取該項目的交易記錄
+    const transactionsSheet = await getTransactionsSheet();
+    if (!transactionsSheet) {
+        return {
+            ...project,
+            transactions: []
+        };
+    }
+    
+    const rows = await transactionsSheet.getRows({
+        offset: 1,
+        limit: 1000,
+    });
+    
+    const transactions: Transaction[] = rows
+        .map(parseTransaction)
+        .filter(t => t.projectId === projectId);
+        
+    return {
+        ...project,
+        transactions
+    };
 }
 
 export async function addProject(newProjectData: ProjectData): Promise<Project> {
+    // 確保 kiwiMaruSupported 和 useKiwiMaru 是布林值
+    const kiwiMaruSupported = Boolean(newProjectData.kiwiMaruSupported);
+    const useKiwiMaru = Boolean(newProjectData.useKiwiMaru);
+    
+    console.log('新增專案 - 字型支援狀態:', { 
+        kiwiMaruSupported,
+        useKiwiMaru,
+        inputData: newProjectData 
+    });
     const sheet = await getProjectsSheet();
     if (!sheet) {
         throw new Error("Google Sheets is not configured on the server.");
     }
-    const newId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
+    const newId = crypto.randomUUID();
     
+    // 初始化 commonItems 為空陣列
+    const commonIncomeItems = newProjectData.commonIncomeItems || [];
+    const commonExpenseItems = newProjectData.commonExpenseItems || [];
+
+    const project: Project = {
+        id: newId,
+        name: newProjectData.name,
+        passcode: newProjectData.passcode,
+        useKiwiMaru,
+        kiwiMaruSupported,
+        transactions: [],
+        commonIncomeItems,
+        commonExpenseItems,
+    };
+
     const newRowData = {
         id: newId,
         name: newProjectData.name,
         passcode: `'${newProjectData.passcode}`,
-        useKiwiMaru: newProjectData.useKiwiMaru ? 'TRUE' : 'FALSE',
-        commonIncomeItems: '',
-        commonExpenseItems: '',
+        useKiwiMaru: useKiwiMaru ? 'TRUE' : 'FALSE',
+        kiwiMaruSupported: kiwiMaruSupported ? 'TRUE' : 'FALSE',
+        commonIncomeItems: commonIncomeItems.join(','),
+        commonExpenseItems: commonExpenseItems.join(','),
     };
+    
+    console.log('準備寫入 Google Sheets 的資料:', {
+        ...newRowData,
+        passcode: '***' // 隱藏密碼
+    });
+    
+    console.log('新增專案資料:', {
+        ...newRowData,
+        passcode: '***' // 隱藏密碼
+    });
 
     const newRow = await sheet.addRow(newRowData);
     
     revalidateTag('projects');
-    return { ...parseProject(newRow), transactions: [] };
+    return project;
 }
 
 export async function updateProject(projectId: string, updatedProjectData: Partial<ProjectData>): Promise<void> {
+    // 如果更新了名稱或 useKiwiMaru 設置，則檢查字體支援
+    if (updatedProjectData.name !== undefined || updatedProjectData.useKiwiMaru !== undefined) {
+        const projectsSheet = await getProjectsSheet();
+        if (!projectsSheet) {
+            throw new Error('無法載入 Google Sheet');
+        }
+        
+        const rows = await projectsSheet.getRows();
+        const rowIndex = rows.findIndex(row => row.get('id') === projectId);
+        
+        if (rowIndex !== -1) {
+            const currentName = updatedProjectData.name || rows[rowIndex].get('name');
+            const useKiwiMaru = updatedProjectData.useKiwiMaru !== undefined ? 
+                updatedProjectData.useKiwiMaru : 
+                rows[rowIndex].get('useKiwiMaru') === 'TRUE';
+            
+            // 檢查名稱是否完全支援 Kiwi Maru 字體
+            updatedProjectData.kiwiMaruSupported = useKiwiMaru ? 
+                await isTextFullySupported(currentName) : false;
+        }
+    }
     const sheet = await getProjectsSheet();
     if (!sheet) {
         throw new Error("Google Sheets is not configured on the server.");
@@ -217,14 +299,43 @@ export async function addTransaction(projectId: string, transactionData: Transac
         throw new Error("找不到指定的活動");
     }
 
-    const newTransactionId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
-    const newTransactionData = {
+    const newTransactionId = crypto.randomUUID();
+    // 創建符合 Google Sheets 格式的資料對象
+    const rowData: Record<string, any> = {
         id: newTransactionId,
         projectId,
-        ...transactionData
+        type: transactionData.type,
+        date: transactionData.date,
+        person: transactionData.person,
+        item: transactionData.item,
+        amount: transactionData.amount || 0,
+        notes: transactionData.notes || '',
     };
     
-    await transactionsSheet.addRow(newTransactionData);
+    // 只有當這些屬性存在時才添加
+    if (transactionData.count !== undefined) {
+        rowData.count = transactionData.count;
+    }
+    if (transactionData.voucherType) {
+        rowData.voucherType = transactionData.voucherType;
+    }
+    
+    // 添加行到 Google Sheet
+    await transactionsSheet.addRow(rowData);
+    
+    // 創建並返回完整的交易對象
+    const newTransaction: Transaction = {
+        id: newTransactionId,
+        projectId,
+        type: transactionData.type,
+        date: transactionData.date,
+        person: transactionData.person,
+        item: transactionData.item,
+        amount: transactionData.amount || 0,
+        notes: transactionData.notes || '',
+        count: transactionData.count,
+        voucherType: transactionData.voucherType,
+    };
 
     // Update common items
     const commonItemsKey = transactionData.type === 'income' ? 'commonIncomeItems' : 'commonExpenseItems';
@@ -237,7 +348,19 @@ export async function addTransaction(projectId: string, transactionData: Transac
 
     revalidateTag('projects');
 
-    return { ...transactionData, id: newTransactionId };
+    // 返回完整的交易對象
+    return {
+        id: newTransactionId,
+        projectId,
+        type: transactionData.type,
+        date: transactionData.date,
+        person: transactionData.person,
+        item: transactionData.item,
+        amount: transactionData.amount || 0,
+        notes: transactionData.notes || '',
+        count: transactionData.count,
+        voucherType: transactionData.voucherType,
+    };
 }
 
 export async function updateTransaction(projectId: string, updatedTransaction: Transaction): Promise<void> {
@@ -246,14 +369,17 @@ export async function updateTransaction(projectId: string, updatedTransaction: T
         throw new Error("Google Sheets is not configured on the server.");
     }
 
-    const rows = await transactionsSheet.getRows();
+    const rows = await transactionsSheet.getRows({
+        offset: 1,
+        limit: 1000,
+    });
     const rowIndex = rows.findIndex(row => row.get('id') === updatedTransaction.id && row.get('projectId') === projectId);
 
     if (rowIndex === -1) {
         throw new Error("找不到指定的紀錄");
     }
     const row = rows[rowIndex];
-
+    
     Object.keys(updatedTransaction).forEach(key => {
         const typedKey = key as keyof Transaction;
         if (typedKey !== 'id' && typedKey !== 'projectId') {

@@ -39,6 +39,7 @@ export default function PasscodeForm() {
           title: "錯誤",
           description: "無法載入活動列表。",
           variant: "destructive",
+          duration: 2000
         });
       } finally {
         setIsLoading(false);
@@ -57,6 +58,7 @@ export default function PasscodeForm() {
         title: "提醒",
         description: "請先選擇一個活動。",
         variant: "destructive",
+        duration: 2000
       });
       setIsLoading(false);
       return;
@@ -66,11 +68,17 @@ export default function PasscodeForm() {
 
     if (project && project.passcode === passcode) {
       router.push(`/${project.id}`);
+      toast({
+        title: "成功",
+        description: `已成功進入活動 "${project.name}"`,
+        duration: 2000
+      });
     } else {
       toast({
         title: "錯誤",
         description: "密碼錯誤或活動不存在。",
         variant: "destructive",
+        duration: 2000
       });
       setIsLoading(false);
     }
@@ -88,6 +96,7 @@ export default function PasscodeForm() {
           title: "錯誤",
           description: "管理員密碼錯誤。",
           variant: "destructive",
+          duration: 2000
         });
         setAdminPasscode('');
       }
@@ -117,18 +126,22 @@ export default function PasscodeForm() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Select onValueChange={setSelectedProjectId} value={selectedProjectId} disabled={isLoading}>
-                  <SelectTrigger className="w-full font-body">
-                    <SelectValue placeholder="請選擇活動..." />
+                  <SelectTrigger className="w-full">
+                    <SelectValue 
+                      placeholder={
+                        <span className="font-kiwi">請選擇活動...</span>
+                      } 
+                    />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="font-noto-sans">
                     {projects.length > 0 ? (
                       projects.map((project) => (
-                        <SelectItem key={project.id} value={project.id} className="font-body">
+                        <SelectItem key={project.id} value={project.id} className="font-noto-sans">
                           {project.name}
                         </SelectItem>
                       ))
                     ) : (
-                      <SelectItem value="loading" disabled>
+                      <SelectItem value="loading" disabled className="font-noto-sans">
                         {isLoading ? "載入活動中..." : "沒有可用的活動"}
                       </SelectItem>
                     )}

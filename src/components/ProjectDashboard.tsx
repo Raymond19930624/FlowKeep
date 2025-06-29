@@ -61,12 +61,12 @@ export default function ProjectDashboard({ projectId }: ProjectDashboardProps) {
         setProject(loadedProject);
         setTransactions(loadedProject.transactions);
       } else {
-        toast({ title: "錯誤", description: "活動不存在或無法載入。", variant: "destructive" });
+        toast({ title: "錯誤", description: "活動不存在或無法載入。", variant: "destructive", duration: 2000 });
         router.push('/');
       }
     } catch (error) {
         console.error("Failed to load project data:", error);
-        toast({ title: "錯誤", description: "載入活動資料失敗。", variant: "destructive" });
+        toast({ title: "錯誤", description: "載入活動資料失敗。", variant: "destructive", duration: 2000 });
         router.push('/');
     } finally {
         setIsLoading(false);
@@ -87,17 +87,17 @@ export default function ProjectDashboard({ projectId }: ProjectDashboardProps) {
         if (editingId) {
           const transactionToUpdate: Transaction = { ...data, id: editingId };
           await apiUpdateTransaction(project.id, transactionToUpdate);
-          toast({ title: "成功", description: `紀錄已成功更新。` });
+          toast({ title: "成功", description: `紀錄已成功更新。`, duration: 2000 });
         } else {
           await apiAddTransaction(project.id, data);
-          toast({ title: "成功", description: `紀錄已成功新增。` });
+          toast({ title: "成功", description: `紀錄已成功新增。`, duration: 2000 });
         }
         await loadProjectData(); // Refresh data
         setIsEditModalOpen(false);
         setEditingTransaction(null);
       }
     } catch (error) {
-      toast({ title: "錯誤", description: `儲存紀錄失敗: ${(error as Error).message}`, variant: "destructive" });
+      toast({ title: "錯誤", description: `儲存紀錄失敗: ${(error as Error).message}`, variant: "destructive", duration: 2000 });
     }
     setIsSubmitting(false);
   };
@@ -122,17 +122,17 @@ export default function ProjectDashboard({ projectId }: ProjectDashboardProps) {
 
   const executeDeleteTransaction = async () => {
     if (!project || !transactionIdToDelete) {
-      toast({ title: "錯誤", description: "刪除操作無法完成，缺少必要資訊。", variant: "destructive" });
+      toast({ title: "錯誤", description: "刪除操作無法完成，缺少必要資訊。", variant: "destructive", duration: 2000 });
       setIsDeleteConfirmOpen(false);
       return;
     }
     setIsSubmitting(true);
     try {
       await apiDeleteTransaction(project.id, transactionIdToDelete);
-      toast({ title: "成功", description: "紀錄已刪除。" });
+      toast({ title: "成功", description: "紀錄已刪除。", duration: 2000 });
       await loadProjectData(); // Refresh data
     } catch (error) {
-      toast({ title: "錯誤", description: `刪除紀錄時發生預期外的錯誤: ${(error as Error).message}`, variant: "destructive" });
+      toast({ title: "錯誤", description: `刪除紀錄時發生預期外的錯誤: ${(error as Error).message}`, variant: "destructive", duration: 2000 });
     } finally {
       setIsDeleteConfirmOpen(false);
       setTransactionIdToDelete(null);
@@ -147,17 +147,17 @@ export default function ProjectDashboard({ projectId }: ProjectDashboardProps) {
             const freshProjectData = await getProjectById(project.id);
             if (freshProjectData) {
                 exportProjectToExcel(freshProjectData, freshProjectData.transactions);
-                toast({ title: "成功", description: `活動 "${freshProjectData.name}" 已匯出為 Excel 檔案。`});
+                toast({ title: "成功", description: `活動 "${freshProjectData.name}" 已匯出為 Excel 檔案。`, duration: 2000 });
             } else {
-                toast({ title: "錯誤", description: "無法獲取最新的專案資料進行匯出。", variant: "destructive" });
+                toast({ title: "錯誤", description: "無法獲取最新的專案資料進行匯出。", variant: "destructive", duration: 2000 });
             }
         } catch (error) {
-            toast({ title: "錯誤", description: `匯出失敗: ${(error as Error).message}`, variant: "destructive" });
+            toast({ title: "錯誤", description: `匯出失敗: ${(error as Error).message}`, variant: "destructive", duration: 2000 });
         } finally {
             setIsLoading(false);
         }
     } else {
-        toast({ title: "錯誤", description: "找不到專案資料，無法匯出。", variant: "destructive" });
+        toast({ title: "錯誤", description: "找不到專案資料，無法匯出。", variant: "destructive", duration: 2000 });
     }
   };
 
@@ -200,7 +200,7 @@ export default function ProjectDashboard({ projectId }: ProjectDashboardProps) {
                 <div className="text-center">
                     <h1 className={cn(
                         "text-3xl sm:text-4xl text-foreground/90 tracking-wider font-medium",
-                        project.useKiwiMaru ? "font-headline" : "font-body"
+                        project.useKiwiMaru ? "font-kiwi" : "font-noto-sans"
                       )}>
                         {project.name}
                     </h1>

@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { exportProjectToExcel } from '@/lib/exportUtils';
 import { cn } from '@/lib/utils';
+import { validateEventName } from '@/lib/font-validator';
 
 async function checkFontSupport(font: string, text: string): Promise<boolean> {
   if (!text || typeof window === 'undefined' || !document.fonts) {
@@ -61,7 +62,9 @@ const changePasscodeSchema = z.object({
 
 export default function ProjectAdminPage() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [fontValidationError, setFontValidationError] = useState<string | null>(null);
   const [showPasscodes, setShowPasscodes] = useState<Record<string, boolean>>({});
 
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
@@ -95,7 +98,7 @@ export default function ProjectAdminPage() {
       setProjects(fetchedProjects);
     } catch (error) {
       console.error("Failed to load projects:", error);
-      toast({ title: "錯誤", description: "無法載入活動列表。", variant: "destructive" });
+      toast({ title: "錯誤", description: "無法載入活動列表。", variant: "destructive", duration: 2000 });
     } finally {
       setIsLoading(false);
     }
@@ -105,39 +108,49 @@ export default function ProjectAdminPage() {
     loadProjects();
   }, [loadProjects]);
 
+  // 重置表單狀態
+  const resetForm = useCallback(() => {
+    setCurrentProject(null);
+    setProjectName('');
+    setProjectPasscode('');
+    setFontValidationError(null);
+  }, []);
+
   const handleOpenAddEditDialog = (project?: Project) => {
+    // 先重置表單
+    resetForm();
+    
+    // 如果是編輯模式，設置表單值
     if (project) {
       setCurrentProject(project);
       setProjectName(project.name);
       setProjectPasscode(project.passcode);
-    } else {
-      setCurrentProject({});
-      setProjectName('');
-      setProjectPasscode('');
     }
+    
+    // 最後再打開對話框
     setIsAddEditDialogOpen(true);
   };
 
   const handleSaveProject = async () => {
     const trimmedName = projectName.trim();
     const trimmedPasscode = projectPasscode.trim();
-  
+    
     if (!trimmedName || !trimmedPasscode) {
-      toast({ title: "錯誤", description: "活動名稱和密碼不能為空。", variant: "destructive" });
+      toast({ title: "錯誤", description: "請填寫活動名稱和密碼。", variant: "destructive", duration: 2000 });
       return;
     }
 
     if (trimmedPasscode.length < 3 || trimmedPasscode.length > 8) {
-        toast({ title: "錯誤", description: "活動密碼長度必須介於 3 到 8 位之間。", variant: "destructive" });
-        return;
+      toast({ title: "錯誤", description: "活動密碼長度必須介於 3 到 8 位之間。", variant: "destructive", duration: 2000 });
+      return;
     }
-  
+    
     setIsLoading(true);
   
     try {
       const adminPass = await getAdminPasscode();
       if (trimmedPasscode === adminPass) {
-        toast({ title: "錯誤", description: "活動密碼不能與管理員密碼相同。", variant: "destructive" });
+        toast({ title: "錯誤", description: "活動密碼不能與管理員密碼相同。", variant: "destructive", duration: 2000 });
         setIsLoading(false);
         return;
       }
@@ -150,27 +163,82 @@ export default function ProjectAdminPage() {
         : allProjects;
   
       if (otherProjects.some((p) => p.name.trim().toLowerCase() === trimmedName.toLowerCase())) {
-        toast({ title: "錯誤", description: "活動名稱已被使用。", variant: "destructive" });
+        toast({ title: "錯誤", description: "活動名稱已被使用。", variant: "destructive", duration: 2000 });
         setIsLoading(false);
         return;
       }
   
       if (otherProjects.some((p) => p.passcode === trimmedPasscode)) {
-        toast({ title: "錯誤", description: "活動密碼已被其他活動使用。", variant: "destructive" });
+        toast({ title: "錯誤", description: "活動密碼已被其他活動使用。", variant: "destructive", duration: 2000 });
         setIsLoading(false);
         return;
       }
 
-      const useKiwiMaru = await checkFontSupport('"Kiwi Maru"', trimmedName);
+      // 驗證字型支援（僅提示，不阻止提交）
+      try {
+        const fontValidation = await validateEventName(trimmedName);
+        if (!fontValidation.isValid) {
+          setFontValidationError(fontValidation.message || '活動名稱包含不支援的字元');
+          // 僅顯示警告，不阻止提交
+          toast({
+            title: "注意",
+            description: "活動名稱包含不支援 Kiwi Maru 字型的字元，可能會影響顯示效果。",
+            variant: "default",
+            duration: 2000 // 2 秒後自動關閉
+          });
+        } else {
+          setFontValidationError(null);
+        }
+      } catch (error) {
+        console.error('字型驗證出錯:', error);
+        // 即使驗證出錯也繼續執行，僅記錄錯誤
+        setFontValidationError('字型驗證時發生錯誤，但不影響活動建立');
+      }
+      
+      console.log(`活動名稱 "${trimmedName}" 已通過字型驗證`);
   
-      const projectData: ProjectData = { name: trimmedName, passcode: trimmedPasscode, useKiwiMaru };
+      // 重新驗證字型支援狀態，確保結果準確
+      let isNameSupported = true;
+      try {
+        const validation = await validateEventName(trimmedName);
+        isNameSupported = validation.isValid;
+        console.log(`字型支援狀態: ${isNameSupported ? '支援' : '不支援'}`);
+      } catch (error) {
+        console.error('驗證字型時出錯:', error);
+        isNameSupported = false;
+      }
+      
+      // 如果字型不支援，強制關閉 useKiwiMaru
+      const useKiwiMaru = isNameSupported; // 只有當字型支援時才啟用 Kiwi Maru
+      
+      const projectData: ProjectData = { 
+        name: trimmedName, 
+        passcode: trimmedPasscode,
+        useKiwiMaru,
+        kiwiMaruSupported: isNameSupported,
+      };
+      
+      console.log('專案字型設定:', {
+        useKiwiMaru,
+        kiwiMaruSupported: isNameSupported,
+        name: trimmedName
+      });
+      
+      console.log('儲存的專案資料:', {
+        ...projectData,
+        passcode: '***' // 隱藏密碼
+      });
 
       if (isEditing && currentProject?.id) {
         await apiUpdateProject(currentProject.id, projectData);
-        toast({ title: "成功", description: "活動已更新。" });
+        toast({ title: "成功", description: "活動已更新。", duration: 2000 });
       } else {
         await apiAddProject(projectData);
-        toast({ title: "成功", description: "活動已新增。" });
+        toast({ 
+          title: "成功", 
+          description: "活動已新增。",
+          duration: 2000 // 2 秒後自動關閉
+        });
       }
   
       await loadProjects();
@@ -181,7 +249,7 @@ export default function ProjectAdminPage() {
   
     } catch (error) {
       console.error("Failed to save project:", error);
-      toast({ title: "錯誤", description: (error as Error).message, variant: "destructive" });
+      toast({ title: "錯誤", description: (error as Error).message, variant: "destructive", duration: 2000 });
     } finally {
       setIsLoading(false);
     }
@@ -202,7 +270,7 @@ export default function ProjectAdminPage() {
       const projectToVerify = projects.find(p => p.id === projectToDeleteId);
   
       if (!projectToVerify) {
-        toast({ title: "錯誤", description: "找不到要刪除的活動。", variant: "destructive" });
+        toast({ title: "錯誤", description: "找不到要刪除的活動。", variant: "destructive", duration: 2000 });
         setIsDeleteConfirmDialogOpen(false);
         setIsLoading(false);
         return;
@@ -210,16 +278,20 @@ export default function ProjectAdminPage() {
   
       if (deleteConfirmInput === projectToVerify.passcode) {
         await apiDeleteProject(projectToDeleteId);
-        toast({ title: "成功", description: "活動已刪除。" });
+        toast({ 
+          title: "成功", 
+          description: "活動已刪除。",
+          duration: 2000 // 2 秒後自動關閉
+        });
         await loadProjects();
         setIsDeleteConfirmDialogOpen(false);
         setProjectToDeleteId(null);
         setDeleteConfirmInput('');
       } else {
-        toast({ title: "錯誤", description: "活動密碼錯誤，刪除失敗。", variant: "destructive" });
+        toast({ title: "錯誤", description: "活動密碼錯誤，刪除失敗。", variant: "destructive", duration: 2000 });
       }
     } catch (error) {
-      toast({ title: "錯誤", description: (error as Error).message, variant: "destructive" });
+      toast({ title: "錯誤", description: (error as Error).message, variant: "destructive", duration: 2000 });
     } finally {
       setIsLoading(false);
     }
@@ -238,9 +310,9 @@ export default function ProjectAdminPage() {
     setIsLoading(true);
     try {
       exportProjectToExcel(project, project.transactions);
-      toast({ title: "成功", description: `活動 "${project.name}" 已匯出為 Excel 檔案。`});
+      toast({ title: "成功", description: `活動 "${project.name}" 已匯出為 Excel 檔案。`, duration: 2000 });
     } catch (error) {
-        toast({ title: "錯誤", description: `匯出失敗: ${(error as Error).message}`, variant: "destructive" });
+        toast({ title: "錯誤", description: `匯出失敗: ${(error as Error).message}`, variant: "destructive", duration: 2000 });
     } finally {
         setIsLoading(false);
     }
@@ -255,11 +327,11 @@ export default function ProjectAdminPage() {
     setIsLoading(false);
 
     if (result.success) {
-      toast({ title: "成功", description: result.message });
+      toast({ title: "成功", description: result.message, duration: 2000 });
       setIsChangePasscodeDialogOpen(false);
       changePasscodeForm.reset();
     } else {
-      toast({ title: "錯誤", description: result.message, variant: "destructive" });
+      toast({ title: "錯誤", description: result.message, variant: "destructive", duration: 2000 });
     }
   };
 
@@ -280,7 +352,7 @@ export default function ProjectAdminPage() {
                     <h1 className="font-headline text-3xl sm:text-4xl text-foreground/90 tracking-wider font-medium">
                         活動管理
                     </h1>
-                    <p className="text-center text-sm text-muted-foreground font-body mt-1">建立、編輯或刪除你的活動</p>
+                    <p className="text-center text-sm text-muted-foreground font-noto-sans mt-1">建立、編輯或刪除你的活動</p>
                 </div>
             </div>
         </header>
@@ -306,7 +378,7 @@ export default function ProjectAdminPage() {
                   <TableBody>
                     {projects.map((project) => (
                       <TableRow key={project.id} className="hover:bg-transparent">
-                        <TableCell className="font-bold break-words whitespace-normal">{project.name}</TableCell>
+                        <TableCell className="font-bold break-words whitespace-normal font-noto-sans">{project.name}</TableCell>
                         <TableCell className="w-[120px] md:w-[150px] text-right md:text-center">
                           <div className="flex items-center justify-end md:justify-center">
                             <span className="font-code w-[9ch] text-left">{showPasscodes[project.id] ? project.passcode : '••••••••'}</span>
@@ -391,12 +463,11 @@ export default function ProjectAdminPage() {
         </Card>
 
         <Dialog open={isAddEditDialogOpen} onOpenChange={(isOpen) => {
-          setIsAddEditDialogOpen(isOpen);
           if (!isOpen) {
-              setCurrentProject(null);
-              setProjectName('');
-              setProjectPasscode('');
+            // 關閉對話框時重置表單
+            resetForm();
           }
+          setIsAddEditDialogOpen(isOpen);
         }}>
           <DialogContent className="sm:max-w-[425px] font-body">
             <form onSubmit={(e) => { e.preventDefault(); handleSaveProject(); }}>
@@ -408,11 +479,29 @@ export default function ProjectAdminPage() {
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="projectName" className="text-right">名稱</Label>
-                  <Input id="projectName" value={projectName} onChange={(e) => setProjectName(e.target.value)} className="col-span-3" placeholder="例如：春季團建活動" />
+                  <Label htmlFor="projectName" className="text-right">活動名稱</Label>
+                  <div className="col-span-3 relative">
+                    <Input 
+                      id="projectName" 
+                      value={projectName} 
+                      onChange={(e) => setProjectName(e.target.value)} 
+                      className={`w-full ${fontValidationError ? 'border-red-500 pr-8' : ''}`} 
+                      placeholder="例如：春季團建活動" 
+                    />
+                    {fontValidationError && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <AlertTriangle className="h-4 w-4 text-red-500 absolute right-3 top-1/2 transform -translate-y-1/2" />
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-xs">
+                          <p className="text-sm text-red-600">{fontValidationError}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="projectPasscode" className="text-right">密碼</Label>
+                  <Label htmlFor="projectPasscode" className="text-right">活動密碼</Label>
                   <Input id="projectPasscode" type="password" value={projectPasscode} onChange={(e) => setProjectPasscode(e.target.value)} className="col-span-3" placeholder="設定活動存取密碼" />
                 </div>
               </div>
@@ -439,8 +528,11 @@ export default function ProjectAdminPage() {
                     <DialogTitle className="font-headline flex items-center">
                       <AlertTriangle className="mr-2 h-5 w-5 text-destructive" /> 確認刪除活動
                       </DialogTitle>
-                    <DialogDescription>
-                        此操作無法復原。請輸入活動密碼以確認刪除活動「<span className="font-semibold">{projects.find(p => p.id === projectToDeleteId)?.name}</span>」。
+                    <DialogDescription className="break-words">
+                        此操作無法復原。請輸入活動密碼以確認刪除活動：<br />
+                        <span className="font-sans font-medium" style={{ fontFamily: '"Noto Sans TC", sans-serif' }}>
+                            「{projects.find(p => p.id === projectToDeleteId)?.name}」
+                        </span>
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">

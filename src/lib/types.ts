@@ -13,13 +13,17 @@ export interface TransactionData {
 
 export interface Transaction extends TransactionData {
   id: string;
+  projectId: string;
 }
 
 // For creating a new project
 export interface ProjectData {
   name: string;
   passcode: string;
-  useKiwiMaru: boolean;
+  useKiwiMaru?: boolean;
+  kiwiMaruSupported?: boolean;
+  commonIncomeItems?: string[];
+  commonExpenseItems?: string[];
 }
 
 // The full project object structure
@@ -28,6 +32,7 @@ export interface Project {
   name: string;
   passcode: string;
   useKiwiMaru: boolean;
+  kiwiMaruSupported: boolean;
   transactions: Transaction[];
   commonIncomeItems: string[];
   commonExpenseItems: string[];

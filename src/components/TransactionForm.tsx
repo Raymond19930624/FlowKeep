@@ -172,9 +172,9 @@ export default function TransactionForm({
     try {
       await deleteCommonItem(projectId, currentFormType, itemToDelete);
       await onCommonItemsChange();
-      toast({ title: "成功", description: `常用項目 "${itemToDelete}" 已刪除。` });
+      toast({ title: "成功", description: `常用項目 "${itemToDelete}" 已刪除。`, duration: 2000 });
     } catch (error) {
-      toast({ title: "錯誤", description: `刪除常用項目失敗: ${(error as Error).message}`, variant: "destructive" });
+      toast({ title: "錯誤", description: `刪除常用項目失敗: ${(error as Error).message}`, variant: "destructive", duration: 2000 });
     } finally {
       setIsSingleDeleteConfirmOpen(false);
       setItemToDelete(null);
@@ -185,9 +185,9 @@ export default function TransactionForm({
      try {
       await clearCommonItems(projectId, currentFormType);
       await onCommonItemsChange();
-      toast({ title: "成功", description: `所有常用${currentFormType === 'income' ? '收入' : '支出'}項目已清除。` });
+      toast({ title: "成功", description: `所有常用${currentFormType === 'income' ? '收入' : '支出'}項目已清除。`, duration: 2000 });
     } catch (error) {
-      toast({ title: "錯誤", description: `清除常用項目失敗: ${(error as Error).message}`, variant: "destructive" });
+      toast({ title: "錯誤", description: `清除常用項目失敗: ${(error as Error).message}`, variant: "destructive", duration: 2000 });
     }
   };
 
