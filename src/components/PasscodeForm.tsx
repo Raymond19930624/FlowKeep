@@ -67,12 +67,14 @@ export default function PasscodeForm() {
     const project = projects.find(p => p.id === selectedProjectId);
 
     if (project && project.passcode === passcode) {
-      router.push(`/${project.id}`);
       toast({
         title: "成功",
         description: `已成功進入活動 "${project.name}"`,
         duration: 2000
       });
+      // 先重置 loading 狀態，再進行導航
+      setIsLoading(false);
+      router.push(`/${project.id}`);
     } else {
       toast({
         title: "錯誤",
@@ -92,6 +94,8 @@ export default function PasscodeForm() {
       if (isValid) {
         // 保存管理員密碼到 localStorage
         localStorage.setItem('admin_passcode', adminPasscode);
+        // 先重置 loading 狀態，再進行導航
+        setIsLoading(false);
         router.push('/admin');
       } else {
         toast({
