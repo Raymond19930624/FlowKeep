@@ -180,10 +180,12 @@ export default function ProjectAdminPage() {
     }
     
     // 檢查字型支援（僅提示，不阻止提交）
+    let isKiwiMaruSupported = true;
     try {
       const fontValidation = await validateEventName(trimmedName);
       if (!fontValidation.isValid) {
         setFontValidationError(fontValidation.message || '活動名稱包含不支援的字元');
+        isKiwiMaruSupported = false;
         // 僅顯示提示，不阻止提交
         toast({
           title: "注意",
@@ -197,6 +199,7 @@ export default function ProjectAdminPage() {
     } catch (error) {
       console.error('字型驗證出錯:', error);
       setFontValidationError('字型驗證時發生錯誤，將使用預設字體');
+      isKiwiMaruSupported = false;
     }
 
     // 檢查密碼長度
@@ -236,8 +239,8 @@ export default function ProjectAdminPage() {
         id: currentProject?.id || crypto.randomUUID(),
         name: trimmedName,
         passcode: trimmedPasscode,
-        useKiwiMaru: true,
-        kiwiMaruSupported: true,
+        useKiwiMaru: isKiwiMaruSupported,
+        kiwiMaruSupported: isKiwiMaruSupported,
         commonIncomeItems: currentProject?.commonIncomeItems || [],
         commonExpenseItems: currentProject?.commonExpenseItems || [],
         transactions: currentProject?.transactions || [],
