@@ -4,17 +4,20 @@
 @tailwind utilities;
 
 /* 定義字體類別 */
-.font-kiwi {
+.font-kiwi,
+.font-sans,
+body,
+button,
+input,
+select,
+textarea,
+::placeholder {
   font-family: 'Kiwi Maru', sans-serif;
 }
 
-.font-sans {
-  font-family: 'Kiwi Maru', sans-serif;
-}
-
-/* 預設使用 Kiwi Maru */
-body {
-  font-family: 'Kiwi Maru', sans-serif;
+/* 確保所有元素都繼承字體 */
+* {
+  font-family: inherit;
 }
 
 @layer base {
