@@ -138,39 +138,11 @@ export default function ProjectAdminPage() {
     loadProjects();
   }, [loadProjects]);
 
-  // 當專案名稱變更時檢查字型支援
+  // 當專案名稱變更時，清空之前的驗證錯誤
   useEffect(() => {
-    const validate = async () => {
-      if (!projectName) {
-        setFontValidationError(null);
-        return;
-      }
-      
-      let isNameSupported = true;
-      try {
-        const fontValidation = await validateEventName(projectName);
-        isNameSupported = fontValidation.isValid;
-        
-        if (!isNameSupported) {
-          setFontValidationError(fontValidation.message || '活動名稱包含不支援的字元');
-          // 僅顯示警告，不阻止提交
-          toast({
-            title: "注意",
-            description: "活動名稱包含不支援 Kiwi Maru 字型的字元，將使用預設字體顯示。",
-            variant: "default",
-            duration: 2000
-          });
-        } else {
-          setFontValidationError(null);
-        }
-      } catch (error) {
-        console.error('字型驗證出錯:', error);
-        isNameSupported = false;
-        setFontValidationError('字型驗證時發生錯誤，將使用預設字體');
-      }
-    };
-    
-    validate();
+    if (fontValidationError) {
+      setFontValidationError(null);
+    }
   }, [projectName]);
 
   // 重置表單狀態
@@ -205,6 +177,26 @@ export default function ProjectAdminPage() {
     if (!trimmedName || !trimmedPasscode) {
       toast({ title: "錯誤", description: "請填寫所有必填欄位。", variant: "destructive", duration: 2000 });
       return;
+    }
+    
+    // 檢查字型支援
+    try {
+      const fontValidation = await validateEventName(trimmedName);
+      if (!fontValidation.isValid) {
+        setFontValidationError(fontValidation.message || '活動名稱包含不支援的字元');
+        toast({
+          title: "注意",
+          description: "活動名稱包含不支援 Kiwi Maru 字型的字元，將使用預設字體顯示。",
+          variant: "default",
+          duration: 2000
+        });
+        return; // 驗證失敗時不繼續提交
+      }
+      setFontValidationError(null);
+    } catch (error) {
+      console.error('字型驗證出錯:', error);
+      setFontValidationError('字型驗證時發生錯誤，將使用預設字體');
+      return; // 驗證失敗時不繼續提交
     }
 
     // 檢查密碼長度
