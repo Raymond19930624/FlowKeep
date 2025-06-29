@@ -21,7 +21,7 @@ import { getProjects, getProjectById, addProject as apiAddProject, updateProject
 import { changeAdminPasscode } from '@/app/actions';
 import { projectSchema, validateFormData } from '@/lib/validation';
 
-import { PlusCircle, Edit3, Trash2, LogOut, Eye, EyeOff, FileTextIcon, AlertTriangle, LogIn, FileDown, MoreHorizontal, X, KeyRound } from 'lucide-react';
+import { PlusCircle, Edit3, Trash2, LogOut, Eye, EyeOff, FileTextIcon, AlertTriangle, LogIn, FileDown, MoreHorizontal, X, KeyRound, AlertCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
@@ -91,35 +91,54 @@ export default function ProjectAdminPage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        // 在生產環境中，我們需要先確保頁面完全加載
+        if (typeof window === 'undefined') return;
+        
+        console.log('開始檢查認證狀態...');
         const savedPasscode = localStorage.getItem('admin_passcode');
+        
         if (!savedPasscode) {
           console.log('未找到保存的密碼，重定向到首頁');
           router.push('/');
           return;
         }
         
-        // 直接比較本地保存的密碼，不再進行網絡請求
-        // 因為我們在登入時已經驗證過密碼
-        console.log('使用本地保存的密碼進行認證');
+        console.log('找到保存的密碼，進行驗證...');
+        
+        // 先設置為已認證，讓頁面可以渲染
         setIsAuthenticated(true);
         
-        // 異步檢查密碼是否有效
+        // 異步驗證密碼
         const verifyPassword = async () => {
           try {
+            console.log('正在獲取管理員密碼...');
             const adminPasscode = await getAdminPasscode();
+            console.log('獲取到的管理員密碼:', adminPasscode);
+            
             if (savedPasscode !== adminPasscode) {
               console.log('密碼不匹配，清除本地存儲並重定向');
               localStorage.removeItem('admin_passcode');
               setIsAuthenticated(false);
+              toast({
+                title: "登入已過期",
+                description: "請重新登入",
+                variant: "destructive"
+              });
               router.push('/');
+            } else {
+              console.log('密碼驗證成功');
+              setIsAuthenticated(true);
             }
           } catch (error) {
             console.error('密碼驗證出錯:', error);
+            // 如果獲取密碼失敗，仍然保持登入狀態
+            // 因為可能是網絡問題，而不是密碼錯誤
           }
         };
         
-        // 異步驗證密碼，不阻塞頁面渲染
+        // 異步驗證密碼
         verifyPassword();
+        
       } catch (error) {
         console.error('認證檢查出錯:', error);
         localStorage.removeItem('admin_passcode');
@@ -132,8 +151,13 @@ export default function ProjectAdminPage() {
       }
     };
 
-    checkAuth();
-  }, [router]);
+    // 添加一個小延遲，確保頁面完全加載
+    const timer = setTimeout(() => {
+      checkAuth();
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [router, toast]);
   
   // 處理登出
   const handleLogout = () => {
@@ -420,25 +444,37 @@ export default function ProjectAdminPage() {
 
   // 顯示載入中狀態
   if (isAuthenticated === null) {
+    // 顯示加載中狀態
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p className="text-gray-600">檢查權限中...</p>
+          <p className="text-gray-600">載入中...</p>
         </div>
       </div>
     );
   }
 
-  // 如果未認證，顯示未授權訊息
   if (!isAuthenticated) {
+    // 顯示未授權訊息
     return (
-      <div className="flex flex-col justify-center items-center h-screen space-y-4">
-        <div className="text-center space-y-4">
-          <h2 className="text-2xl font-bold">未授權訪問</h2>
-          <p className="text-gray-600">您沒有權限訪問此頁面。</p>
-          <Button onClick={() => router.push('/')} className="mt-4">
-            返回首頁
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center p-6 max-w-sm w-full">
+          <div className="mb-6">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">未授權訪問</h2>
+            <p className="text-gray-600 mb-6">您沒有權限訪問此頁面或登入會話已過期。</p>
+          </div>
+          <Button 
+            onClick={() => {
+              // 清除可能存在的認證狀態
+              localStorage.removeItem('admin_passcode');
+              // 重定向到首頁
+              window.location.href = '/';
+            }}
+            className="w-full"
+          >
+            返回首頁並重新登入
           </Button>
         </div>
       </div>

@@ -100,7 +100,6 @@ export default function PasscodeForm() {
       return;
     }
     
-    // 禁用表單並顯示加載狀態
     setIsLoading(true);
     
     try {
@@ -119,12 +118,13 @@ export default function PasscodeForm() {
           duration: 1000
         });
         
-        // 短暫延遲後重新加載頁面
+        // 使用 window.location 確保完全刷新頁面
         setTimeout(() => {
-          window.location.href = '/admin';
+          // 確保使用完整的 URL 進行重定向
+          const baseUrl = window.location.origin;
+          window.location.href = `${baseUrl}/admin`;
         }, 1000);
       } else {
-        console.log('密碼驗證失敗');
         throw new Error('密碼錯誤');
       }
     } catch (error) {
