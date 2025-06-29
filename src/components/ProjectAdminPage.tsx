@@ -87,11 +87,16 @@ export default function ProjectAdminPage() {
   const router = useRouter();
   const { toast } = useToast();
   
-  // 檢查認證狀態 - 直接使用首頁的認證狀態
+  // 檢查認證狀態
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const savedPasscode = localStorage.getItem('admin_passcode');
+        if (!savedPasscode) {
+          router.push('/');
+          return;
+        }
+        
         const adminPasscode = await getAdminPasscode();
         const isAuth = savedPasscode === adminPasscode;
         setIsAuthenticated(isAuth);
@@ -371,26 +376,67 @@ export default function ProjectAdminPage() {
     }
   };
 
+  // 檢查認證狀態
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const savedPasscode = localStorage.getItem('admin_passcode');
+        if (!savedPasscode) {
+          router.push('/');
+          return;
+        }
+        
+        const adminPasscode = await getAdminPasscode();
+        const isAuth = savedPasscode === adminPasscode;
+        setIsAuthenticated(isAuth);
+        
+        // 如果未認證，導向首頁
+        if (!isAuth) {
+          router.push('/');
+        }
+      } catch (error) {
+        console.error('認證檢查出錯:', error);
+        router.push('/');
+      }
+    };
 
-  if (isLoading && projects.length === 0) {
-    return <div className="flex items-center justify-center h-screen font-body">讀取中...</div>;
+    checkAuth();
+  }, [router]);
+
+  // 顯示載入中狀態
+  if (isAuthenticated === null) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-600">檢查權限中...</p>
+        </div>
+      </div>
+    );
   }
 
-  // 顯示載入中或未認證
-  if (isAuthenticated === null || isAuthenticated === false) {
+  // 如果未認證，顯示未授權訊息
+  if (!isAuthenticated) {
     return (
       <div className="flex flex-col justify-center items-center h-screen space-y-4">
-        {isAuthenticated === null ? (
-          <>
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-            <p className="text-gray-600">檢查權限中...</p>
-          </>
-        ) : (
-          <>
-            <AlertCircle className="h-12 w-12 text-red-500" />
-            <p className="text-gray-600">未授權訪問，正在導向首頁...</p>
-          </>
-        )}
+        <div className="text-center space-y-4">
+          <h2 className="text-2xl font-bold">未授權訪問</h2>
+          <p className="text-gray-600">您沒有權限訪問此頁面。</p>
+          <Button onClick={() => router.push('/')} className="mt-4">
+            返回首頁
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading && projects.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-600">載入中...</p>
+        </div>
       </div>
     );
   }
