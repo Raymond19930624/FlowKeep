@@ -138,20 +138,14 @@ export default function ProjectAdminPage() {
     loadProjects();
   }, [loadProjects]);
 
-  // 重置表單狀態
-  const resetForm = useCallback(() => {
-    setCurrentProject(null);
-    setProjectName('');
-    setProjectPasscode('');
-  }, []);
-
-  const handleOpenAddEditDialog = (project?: Project) => {
-    // 先重置表單
-    resetForm();
-    
-    // 當專案名稱變更時檢查字型支援
+  // 當專案名稱變更時檢查字型支援
   useEffect(() => {
     const validate = async () => {
+      if (!projectName) {
+        setFontValidationError(null);
+        return;
+      }
+      
       let isNameSupported = true;
       try {
         const fontValidation = await validateEventName(projectName);
@@ -178,6 +172,17 @@ export default function ProjectAdminPage() {
     
     validate();
   }, [projectName]);
+
+  // 重置表單狀態
+  const resetForm = useCallback(() => {
+    setCurrentProject(null);
+    setProjectName('');
+    setProjectPasscode('');
+  }, []);
+
+  const handleOpenAddEditDialog = (project?: Project) => {
+    // 先重置表單
+    resetForm();
     
     // 如果是編輯模式，設置表單值
     if (project) {
@@ -232,7 +237,7 @@ export default function ProjectAdminPage() {
       return;
     }
 
-      setIsLoading(true);
+    setIsLoading(true);
     try {
       const now = new Date().toISOString();
       const projectData: Project = {
