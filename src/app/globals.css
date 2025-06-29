@@ -9,12 +9,12 @@
 }
 
 .font-sans {
-  font-family: 'Noto Sans TC', sans-serif;
+  font-family: 'Kiwi Maru', sans-serif;
 }
 
-/* 預設使用 Noto Sans TC */
+/* 預設使用 Kiwi Maru */
 body {
-  font-family: 'Noto Sans TC', sans-serif;
+  font-family: 'Kiwi Maru', sans-serif;
 }
 
 @layer base {
