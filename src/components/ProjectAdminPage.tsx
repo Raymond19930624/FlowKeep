@@ -179,24 +179,24 @@ export default function ProjectAdminPage() {
       return;
     }
     
-    // 檢查字型支援
+    // 檢查字型支援（僅提示，不阻止提交）
     try {
       const fontValidation = await validateEventName(trimmedName);
       if (!fontValidation.isValid) {
         setFontValidationError(fontValidation.message || '活動名稱包含不支援的字元');
+        // 僅顯示提示，不阻止提交
         toast({
           title: "注意",
           description: "活動名稱包含不支援 Kiwi Maru 字型的字元，將使用預設字體顯示。",
           variant: "default",
           duration: 2000
         });
-        return; // 驗證失敗時不繼續提交
+      } else {
+        setFontValidationError(null);
       }
-      setFontValidationError(null);
     } catch (error) {
       console.error('字型驗證出錯:', error);
       setFontValidationError('字型驗證時發生錯誤，將使用預設字體');
-      return; // 驗證失敗時不繼續提交
     }
 
     // 檢查密碼長度
