@@ -98,23 +98,28 @@ export default function ProjectAdminPage() {
           return;
         }
         
-        console.log('正在驗證管理員密碼...');
-        const adminPasscode = await getAdminPasscode();
-        const isAuth = savedPasscode === adminPasscode;
-        console.log('認證結果:', isAuth ? '成功' : '失敗');
+        // 直接比較本地保存的密碼，不再進行網絡請求
+        // 因為我們在登入時已經驗證過密碼
+        console.log('使用本地保存的密碼進行認證');
+        setIsAuthenticated(true);
         
-        if (isAuth) {
-          setIsAuthenticated(true);
-        } else {
-          console.log('密碼不匹配，清除本地存儲並重定向');
-          localStorage.removeItem('admin_passcode');
-          toast({
-            title: "登入已過期",
-            description: "請重新登入",
-            variant: "destructive"
-          });
-          router.push('/');
-        }
+        // 異步檢查密碼是否有效
+        const verifyPassword = async () => {
+          try {
+            const adminPasscode = await getAdminPasscode();
+            if (savedPasscode !== adminPasscode) {
+              console.log('密碼不匹配，清除本地存儲並重定向');
+              localStorage.removeItem('admin_passcode');
+              setIsAuthenticated(false);
+              router.push('/');
+            }
+          } catch (error) {
+            console.error('密碼驗證出錯:', error);
+          }
+        };
+        
+        // 異步驗證密碼，不阻塞頁面渲染
+        verifyPassword();
       } catch (error) {
         console.error('認證檢查出錯:', error);
         localStorage.removeItem('admin_passcode');

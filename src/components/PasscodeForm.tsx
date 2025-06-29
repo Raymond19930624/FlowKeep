@@ -88,7 +88,9 @@ export default function PasscodeForm() {
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!adminPasscode.trim()) {
+    const passcode = adminPasscode.trim();
+    
+    if (!passcode) {
       toast({
         title: "錯誤",
         description: "請輸入管理員密碼",
@@ -98,29 +100,42 @@ export default function PasscodeForm() {
       return;
     }
     
+    // 禁用表單並顯示加載狀態
     setIsLoading(true);
+    
     try {
-      const isValid = await verifyAdminPasscode(adminPasscode);
+      console.log('正在驗證管理員密碼...');
+      const isValid = await verifyAdminPasscode(passcode);
+      
       if (isValid) {
+        console.log('密碼驗證成功，保存到本地存儲');
         // 保存管理員密碼到 localStorage
-        localStorage.setItem('admin_passcode', adminPasscode);
-        // 直接導航，讓目標頁面處理 loading 狀態
-        router.push('/admin');
-      } else {
+        localStorage.setItem('admin_passcode', passcode);
+        
+        // 顯示成功消息
         toast({
-          title: "錯誤",
-          description: "管理員密碼錯誤。",
-          variant: "destructive",
-          duration: 2000
+          title: "登入成功",
+          description: "正在跳轉到管理頁面...",
+          duration: 1000
         });
-        setAdminPasscode('');
+        
+        // 短暫延遲後重新加載頁面
+        setTimeout(() => {
+          window.location.href = '/admin';
+        }, 1000);
+      } else {
+        console.log('密碼驗證失敗');
+        throw new Error('密碼錯誤');
       }
     } catch (error) {
-       toast({
-        title: "登入錯誤",
-        description: "驗證時發生未知錯誤。",
+      console.error('登入出錯:', error);
+      toast({
+        title: "登入失敗",
+        description: error instanceof Error ? error.message : "管理員密碼錯誤。",
         variant: "destructive",
+        duration: 2000
       });
+      setAdminPasscode('');
     } finally {
       setIsLoading(false);
     }
