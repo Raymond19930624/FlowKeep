@@ -13,11 +13,25 @@ export async function POST(request: Request) {
       );
     }
 
-    const supportedCharsPath = path.join(process.cwd(), 'public/fonts/kiwi-maru-supported-chars.txt');
-    const unsupportedCharsPath = path.join(process.cwd(), 'public/fonts/kiwi-maru-unsupported-chars.txt');
+    // 使用 path.join 構建跨平台兼容的路徑
+    const supportedCharsPath = path.join(process.cwd(), 'public', 'fonts', 'kiwi-maru-supported-chars.txt');
+    const unsupportedCharsPath = path.join(process.cwd(), 'public', 'fonts', 'kiwi-maru-unsupported-chars.txt');
+
+    // 添加調試日誌
+    console.log('Supported chars path:', supportedCharsPath);
+    console.log('Unsupported chars path:', unsupportedCharsPath);
 
     // 讀取支援的字元清單（不換行格式）
-    const supportedContent = await fs.readFile(supportedCharsPath, 'utf-8');
+    let supportedContent;
+    try {
+      supportedContent = await fs.readFile(supportedCharsPath, 'utf-8');
+      console.log('Supported content length:', supportedContent.length);
+    } catch (error) {
+      console.error('Error reading supported chars file:', error);
+      // 提供一個默認的字符集
+      supportedContent = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    }
+    
     const supportedChars = new Set(supportedContent.split(''));
 
     // 讀取不支援的字元清單（不換行格式）
