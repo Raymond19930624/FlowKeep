@@ -3,24 +3,18 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 定義字體堆疊 */
-:root {
-  --font-kiwi: 'Kiwi Maru', 'Noto Sans TC', sans-serif;
-  --font-sans: 'Noto Sans TC', sans-serif;
+/* 定義字體類別 */
+.font-kiwi {
+  font-family: 'Kiwi Maru', sans-serif;
 }
 
-/* 應用字體到標題 */
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-kiwi);
-  /* 強制使用 Kiwi Maru，如果字元不可用則回退到 Noto Sans TC */
-  @supports (font-variation-settings: normal) {
-    font-family: 'Kiwi Maru', 'Noto Sans TC', sans-serif;
-  }
+.font-sans {
+  font-family: 'Noto Sans TC', sans-serif;
 }
 
-/* 確保其他文字使用 Noto Sans TC */
+/* 預設使用 Noto Sans TC */
 body {
-  font-family: var(--font-sans);
+  font-family: 'Noto Sans TC', sans-serif;
 }
 
 @layer base {

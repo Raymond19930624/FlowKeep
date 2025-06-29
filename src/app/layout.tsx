@@ -18,7 +18,13 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap&text=把活動變成故事，把收支寫成風景" rel="stylesheet" />
+        <link 
+          href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap" 
+          rel="stylesheet" 
+        />
+        <style jsx global>{`
+          @import url('https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+        `}</style>
       </head>
       <body className="font-body antialiased min-h-screen flex flex-col overflow-x-hidden" suppressHydrationWarning={true}>
         {children}
