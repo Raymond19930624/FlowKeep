@@ -17,7 +17,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from "@/hooks/use-toast";
 
 import type { Project, ProjectData } from '@/lib/types';
-import { getProjects, addProject as apiAddProject, updateProject as apiUpdateProject, deleteProject as apiDeleteProject, getAdminPasscode } from '@/lib/storage';
+import { getProjects, getProjectById, addProject as apiAddProject, updateProject as apiUpdateProject, deleteProject as apiDeleteProject, getAdminPasscode } from '@/lib/storage';
 import { changeAdminPasscode } from '@/app/actions';
 
 import { PlusCircle, Edit3, Trash2, LogOut, Eye, EyeOff, FileTextIcon, AlertTriangle, LogIn, FileDown, MoreHorizontal, X, KeyRound } from 'lucide-react';
@@ -309,12 +309,18 @@ export default function ProjectAdminPage() {
   const handleExportProject = async (project: Project) => {
     setIsLoading(true);
     try {
-      exportProjectToExcel(project, project.transactions);
-      toast({ title: "成功", description: `活動 "${project.name}" 已匯出為 Excel 檔案。`, duration: 2000 });
+      // 先獲取完整的專案數據（包括交易記錄）
+      const fullProject = await getProjectById(project.id);
+      if (!fullProject) {
+        throw new Error('無法獲取專案數據');
+      }
+      exportProjectToExcel(fullProject, fullProject.transactions);
+      toast({ title: "成功", description: `活動 "${fullProject.name}" 已匯出為 Excel 檔案。`, duration: 2000 });
     } catch (error) {
-        toast({ title: "錯誤", description: `匯出失敗: ${(error as Error).message}`, variant: "destructive", duration: 2000 });
+      console.error("匯出失敗:", error);
+      toast({ title: "錯誤", description: `匯出失敗: ${(error as Error).message}`, variant: "destructive", duration: 2000 });
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
