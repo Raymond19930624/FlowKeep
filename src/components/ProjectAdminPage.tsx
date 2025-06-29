@@ -69,7 +69,6 @@ export default function ProjectAdminPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
-  const [fontValidationError, setFontValidationError] = useState<string | null>(null);
   const [showPasscodes, setShowPasscodes] = useState<Record<string, boolean>>({});
 
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
@@ -143,7 +142,6 @@ export default function ProjectAdminPage() {
     setCurrentProject(null);
     setProjectName('');
     setProjectPasscode('');
-    setFontValidationError(null);
   }, []);
 
   const handleOpenAddEditDialog = (project?: Project) => {
@@ -203,39 +201,15 @@ export default function ProjectAdminPage() {
       return;
     }
 
-    // 驗證字型支援（僅提示，不阻止提交）
-    let isNameSupported = true;
-    try {
-      const fontValidation = await validateEventName(trimmedName);
-      isNameSupported = fontValidation.isValid;
-      
-      if (!isNameSupported) {
-        setFontValidationError(fontValidation.message || '活動名稱包含不支援的字元');
-        // 僅顯示警告，不阻止提交
-        toast({
-          title: "注意",
-          description: "活動名稱包含不支援 Kiwi Maru 字型的字元，將使用預設字體顯示。",
-          variant: "default",
-          duration: 2000
-        });
-      } else {
-        setFontValidationError(null);
-      }
-    } catch (error) {
-      console.error('字型驗證出錯:', error);
-      isNameSupported = false;
-      setFontValidationError('字型驗證時發生錯誤，將使用預設字體');
-    }
-    
-    setIsLoading(true);
+      setIsLoading(true);
     try {
       const now = new Date().toISOString();
       const projectData: Project = {
         id: currentProject?.id || crypto.randomUUID(),
         name: trimmedName,
         passcode: trimmedPasscode,
-        useKiwiMaru: isNameSupported,
-        kiwiMaruSupported: isNameSupported,
+        useKiwiMaru: true,
+        kiwiMaruSupported: true,
         commonIncomeItems: currentProject?.commonIncomeItems || [],
         commonExpenseItems: currentProject?.commonExpenseItems || [],
         transactions: currentProject?.transactions || [],
@@ -524,11 +498,7 @@ export default function ProjectAdminPage() {
                     required
                   />
                 </div>
-                {fontValidationError && (
-                  <div className="text-red-500 text-sm -mt-2 col-span-4 text-right">
-                    {fontValidationError}
-                  </div>
-                )}
+
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="passcode" className="text-right">
                     活動密碼
