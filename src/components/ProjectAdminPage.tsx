@@ -93,26 +93,36 @@ export default function ProjectAdminPage() {
       try {
         const savedPasscode = localStorage.getItem('admin_passcode');
         if (!savedPasscode) {
+          console.log('未找到保存的密碼，重定向到首頁');
           router.push('/');
           return;
         }
         
+        console.log('正在驗證管理員密碼...');
         const adminPasscode = await getAdminPasscode();
         const isAuth = savedPasscode === adminPasscode;
-        setIsAuthenticated(isAuth);
+        console.log('認證結果:', isAuth ? '成功' : '失敗');
         
-        // 如果未認證，導向首頁
-        if (!isAuth) {
+        if (isAuth) {
+          setIsAuthenticated(true);
+        } else {
+          console.log('密碼不匹配，清除本地存儲並重定向');
+          localStorage.removeItem('admin_passcode');
           toast({
-            title: "請先登入",
-            description: "需要管理員權限才能訪問此頁面",
+            title: "登入已過期",
+            description: "請重新登入",
             variant: "destructive"
           });
           router.push('/');
         }
       } catch (error) {
         console.error('認證檢查出錯:', error);
-        setIsAuthenticated(false);
+        localStorage.removeItem('admin_passcode');
+        toast({
+          title: "認證錯誤",
+          description: "發生錯誤，請重新登入",
+          variant: "destructive"
+        });
         router.push('/');
       }
     };

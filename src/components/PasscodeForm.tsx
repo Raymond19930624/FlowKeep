@@ -88,14 +88,23 @@ export default function PasscodeForm() {
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!adminPasscode.trim()) {
+      toast({
+        title: "錯誤",
+        description: "請輸入管理員密碼",
+        variant: "destructive",
+        duration: 2000
+      });
+      return;
+    }
+    
     setIsLoading(true);
     try {
       const isValid = await verifyAdminPasscode(adminPasscode);
       if (isValid) {
         // 保存管理員密碼到 localStorage
         localStorage.setItem('admin_passcode', adminPasscode);
-        // 先重置 loading 狀態，再進行導航
-        setIsLoading(false);
+        // 直接導航，讓目標頁面處理 loading 狀態
         router.push('/admin');
       } else {
         toast({
