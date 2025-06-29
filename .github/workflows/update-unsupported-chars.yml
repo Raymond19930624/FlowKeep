@@ -1,0 +1,45 @@
+name: Update Unsupported Characters
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'public/fonts/kiwi-maru-unsupported-chars.txt'
+
+jobs:
+  update-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Configure Git
+      run: |
+        git config --global user.name 'GitHub Actions'
+        git config --global user.email 'actions@github.com'
+
+    - name: Commit and push changes
+      run: |
+        git add public/fonts/kiwi-maru-unsupported-chars.txt
+        git diff --quiet && git diff --staged --quiet || \
+        (git commit -m "chore: update unsupported characters" && git push)
+
+    - name: Deploy to Vercel
+      uses: amondnet/vercel-action@v20
+      with:
+        vercel-token: ${{ secrets.VERCEL_TOKEN }}
+        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+        working-directory: ./
+        vercel-args: '--prod'

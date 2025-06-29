@@ -80,6 +80,29 @@ export async function POST(request: Request) {
     // 如果有新發現的不支援字元，追加到不支援清單檔案
     if (newUnsupported.length > 0) {
       await fs.appendFile(unsupportedCharsPath, newUnsupported.join(''), 'utf-8');
+      
+      // 觸發 GitHub Actions 工作流程
+      try {
+        const githubToken = process.env.GITHUB_TOKEN;
+        if (githubToken) {
+          const repo = 'Raymond19930624/FlowKeep';
+          const workflowId = 'update-unsupported-chars.yml';
+          
+          await fetch(`https://api.github.com/repos/${repo}/actions/workflows/${workflowId}/dispatches`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `token ${githubToken}`,
+              'Accept': 'application/vnd.github.v3+json',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              ref: 'main'
+            })
+          });
+        }
+      } catch (error) {
+        console.error('Failed to trigger GitHub Actions workflow:', error);
+      }
     }
 
     return NextResponse.json({
