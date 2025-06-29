@@ -90,6 +90,8 @@ export default function PasscodeForm() {
     try {
       const isValid = await verifyAdminPasscode(adminPasscode);
       if (isValid) {
+        // 保存管理員密碼到 localStorage
+        localStorage.setItem('admin_passcode', adminPasscode);
         router.push('/admin');
       } else {
         toast({

@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { Project, ProjectData } from '@/lib/types';
 import { getProjects, getProjectById, addProject as apiAddProject, updateProject as apiUpdateProject, deleteProject as apiDeleteProject, getAdminPasscode } from '@/lib/storage';
 import { changeAdminPasscode } from '@/app/actions';
+import { projectSchema, validateFormData } from '@/lib/validation';
 
 import { PlusCircle, Edit3, Trash2, LogOut, Eye, EyeOff, FileTextIcon, AlertTriangle, LogIn, FileDown, MoreHorizontal, X, KeyRound } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -61,6 +62,10 @@ const changePasscodeSchema = z.object({
 });
 
 export default function ProjectAdminPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [loginPasscode, setLoginPasscode] = useState('');
+  const [showAdminAuth, setShowAdminAuth] = useState(false);
+  
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -81,6 +86,43 @@ export default function ProjectAdminPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  
+  // 檢查認證狀態 - 直接使用首頁的認證狀態
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const savedPasscode = localStorage.getItem('admin_passcode');
+        const adminPasscode = await getAdminPasscode();
+        const isAuth = savedPasscode === adminPasscode;
+        setIsAuthenticated(isAuth);
+        
+        // 如果未認證，導向首頁
+        if (!isAuth) {
+          toast({
+            title: "請先登入",
+            description: "需要管理員權限才能訪問此頁面",
+            variant: "destructive"
+          });
+          router.push('/');
+        }
+      } catch (error) {
+        console.error('認證檢查出錯:', error);
+        setIsAuthenticated(false);
+        router.push('/');
+      }
+    };
+
+    checkAuth();
+  }, [router]);
+  
+  // 處理登出
+  const handleLogout = () => {
+    localStorage.removeItem('admin_passcode');
+    setIsAuthenticated(false);
+    toast({ title: "已登出", duration: 2000 });
+    // 登出後導回首頁
+    router.push('/');
+  };
 
   const changePasscodeForm = useForm<z.infer<typeof changePasscodeSchema>>({
     resolver: zodResolver(changePasscodeSchema),
@@ -131,105 +173,89 @@ export default function ProjectAdminPage() {
     setIsAddEditDialogOpen(true);
   };
 
-  const handleSaveProject = async () => {
+  const handleSaveProject = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
     const trimmedName = projectName.trim();
     const trimmedPasscode = projectPasscode.trim();
     
+    // 基本驗證
     if (!trimmedName || !trimmedPasscode) {
-      toast({ title: "錯誤", description: "請填寫活動名稱和密碼。", variant: "destructive", duration: 2000 });
+      toast({ title: "錯誤", description: "請填寫所有必填欄位。", variant: "destructive", duration: 2000 });
       return;
     }
 
+    // 檢查密碼長度
     if (trimmedPasscode.length < 3 || trimmedPasscode.length > 8) {
       toast({ title: "錯誤", description: "活動密碼長度必須介於 3 到 8 位之間。", variant: "destructive", duration: 2000 });
       return;
     }
     
-    setIsLoading(true);
-  
+    // 檢查是否與管理員密碼相同
     try {
       const adminPass = await getAdminPasscode();
       if (trimmedPasscode === adminPass) {
         toast({ title: "錯誤", description: "活動密碼不能與管理員密碼相同。", variant: "destructive", duration: 2000 });
-        setIsLoading(false);
         return;
       }
-      
-      const allProjects = await getProjects();
-      const isEditing = !!currentProject?.id;
-  
-      const otherProjects = isEditing
-        ? allProjects.filter((p) => p.id !== currentProject!.id)
-        : allProjects;
-  
-      if (otherProjects.some((p) => p.name.trim().toLowerCase() === trimmedName.toLowerCase())) {
-        toast({ title: "錯誤", description: "活動名稱已被使用。", variant: "destructive", duration: 2000 });
-        setIsLoading(false);
-        return;
-      }
-  
-      if (otherProjects.some((p) => p.passcode === trimmedPasscode)) {
-        toast({ title: "錯誤", description: "活動密碼已被其他活動使用。", variant: "destructive", duration: 2000 });
-        setIsLoading(false);
-        return;
-      }
+    } catch (error) {
+      console.error('獲取管理員密碼時出錯:', error);
+    }
 
-      // 驗證字型支援（僅提示，不阻止提交）
-      try {
-        const fontValidation = await validateEventName(trimmedName);
-        if (!fontValidation.isValid) {
-          setFontValidationError(fontValidation.message || '活動名稱包含不支援的字元');
-          // 僅顯示警告，不阻止提交
-          toast({
-            title: "注意",
-            description: "活動名稱包含不支援 Kiwi Maru 字型的字元，可能會影響顯示效果。",
-            variant: "default",
-            duration: 2000 // 2 秒後自動關閉
-          });
-        } else {
-          setFontValidationError(null);
-        }
-      } catch (error) {
-        console.error('字型驗證出錯:', error);
-        // 即使驗證出錯也繼續執行，僅記錄錯誤
-        setFontValidationError('字型驗證時發生錯誤，但不影響活動建立');
+    // 檢查是否已存在相同名稱的活動
+    const otherProjects = projects.filter((p) => p.id !== (currentProject?.id || ''));
+    if (otherProjects.some((p) => p.name === trimmedName)) {
+      toast({ title: "錯誤", description: "已存在相同名稱的活動。", variant: "destructive", duration: 2000 });
+      return;
+    }
+
+    // 檢查是否已存在相同密碼的活動
+    if (otherProjects.some((p) => p.passcode === trimmedPasscode)) {
+      toast({ title: "錯誤", description: "活動密碼已被其他活動使用。", variant: "destructive", duration: 2000 });
+      return;
+    }
+
+    // 驗證字型支援（僅提示，不阻止提交）
+    let isNameSupported = true;
+    try {
+      const fontValidation = await validateEventName(trimmedName);
+      isNameSupported = fontValidation.isValid;
+      
+      if (!isNameSupported) {
+        // 僅顯示 toast 提示，不顯示表單錯誤
+        toast({
+          title: "注意",
+          description: "活動名稱包含不支援 Kiwi Maru 字型的字元，將使用預設字體顯示。",
+          variant: "default",
+          duration: 2000
+        });
       }
-      
-      console.log(`活動名稱 "${trimmedName}" 已通過字型驗證`);
-  
-      // 重新驗證字型支援狀態，確保結果準確
-      let isNameSupported = true;
-      try {
-        const validation = await validateEventName(trimmedName);
-        isNameSupported = validation.isValid;
-        console.log(`字型支援狀態: ${isNameSupported ? '支援' : '不支援'}`);
-      } catch (error) {
-        console.error('驗證字型時出錯:', error);
-        isNameSupported = false;
-      }
-      
-      // 如果字型不支援，強制關閉 useKiwiMaru
-      const useKiwiMaru = isNameSupported; // 只有當字型支援時才啟用 Kiwi Maru
-      
-      const projectData: ProjectData = { 
-        name: trimmedName, 
+      // 清除任何現有的錯誤提示
+      setFontValidationError(null);
+    } catch (error) {
+      console.error('字型驗證出錯:', error);
+      isNameSupported = false;
+      // 發生錯誤時也不顯示錯誤提示
+      setFontValidationError(null);
+    }
+    
+    setIsLoading(true);
+    try {
+      const now = new Date().toISOString();
+      const projectData: Project = {
+        id: currentProject?.id || crypto.randomUUID(),
+        name: trimmedName,
         passcode: trimmedPasscode,
-        useKiwiMaru,
+        useKiwiMaru: isNameSupported,
         kiwiMaruSupported: isNameSupported,
+        commonIncomeItems: currentProject?.commonIncomeItems || [],
+        commonExpenseItems: currentProject?.commonExpenseItems || [],
+        transactions: currentProject?.transactions || [],
+        createdAt: currentProject?.createdAt || now,
+        updatedAt: now
       };
-      
-      console.log('專案字型設定:', {
-        useKiwiMaru,
-        kiwiMaruSupported: isNameSupported,
-        name: trimmedName
-      });
-      
-      console.log('儲存的專案資料:', {
-        ...projectData,
-        passcode: '***' // 隱藏密碼
-      });
 
-      if (isEditing && currentProject?.id) {
+      if (currentProject?.id) {
         await apiUpdateProject(currentProject.id, projectData);
         toast({ title: "成功", description: "活動已更新。", duration: 2000 });
       } else {
@@ -237,7 +263,7 @@ export default function ProjectAdminPage() {
         toast({ 
           title: "成功", 
           description: "活動已新增。",
-          duration: 2000 // 2 秒後自動關閉
+          duration: 2000
         });
       }
   
@@ -246,10 +272,14 @@ export default function ProjectAdminPage() {
       setCurrentProject(null);
       setProjectName('');
       setProjectPasscode('');
-  
     } catch (error) {
       console.error("Failed to save project:", error);
-      toast({ title: "錯誤", description: (error as Error).message, variant: "destructive", duration: 2000 });
+      toast({ 
+        title: "錯誤", 
+        description: error instanceof Error ? error.message : '發生未知錯誤', 
+        variant: "destructive", 
+        duration: 2000 
+      });
     } finally {
       setIsLoading(false);
     }
@@ -344,6 +374,25 @@ export default function ProjectAdminPage() {
 
   if (isLoading && projects.length === 0) {
     return <div className="flex items-center justify-center h-screen font-body">讀取中...</div>;
+  }
+
+  // 顯示載入中或未認證
+  if (isAuthenticated === null || isAuthenticated === false) {
+    return (
+      <div className="flex flex-col justify-center items-center h-screen space-y-4">
+        {isAuthenticated === null ? (
+          <>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            <p className="text-gray-600">檢查權限中...</p>
+          </>
+        ) : (
+          <>
+            <AlertCircle className="h-12 w-12 text-red-500" />
+            <p className="text-gray-600">未授權訪問，正在導向首頁...</p>
+          </>
+        )}
+      </div>
+    );
   }
 
   return (
@@ -478,37 +527,43 @@ export default function ProjectAdminPage() {
           <DialogContent className="sm:max-w-[425px] font-body">
             <form onSubmit={(e) => { e.preventDefault(); handleSaveProject(); }}>
               <DialogHeader>
-                <DialogTitle className="font-headline">{currentProject?.id ? '編輯活動' : '新增活動'}</DialogTitle>
+                <DialogTitle>{currentProject ? '編輯活動' : '新增活動'}</DialogTitle>
                 <DialogDescription>
-                  {currentProject?.id ? '修改您的活動詳細資訊。' : '建立一個新的活動來追蹤收支。'}
+                  {currentProject ? '更新活動資訊' : '建立一個新的活動'}
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="projectName" className="text-right">活動名稱</Label>
-                  <div className="col-span-3 relative">
-                    <Input 
-                      id="projectName" 
-                      value={projectName} 
-                      onChange={(e) => setProjectName(e.target.value)} 
-                      className={`w-full ${fontValidationError ? 'border-red-500 pr-8' : ''}`} 
-                      placeholder="例如：春季團建活動" 
-                    />
-                    {fontValidationError && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <AlertTriangle className="h-4 w-4 text-red-500 absolute right-3 top-1/2 transform -translate-y-1/2" />
-                        </TooltipTrigger>
-                        <TooltipContent side="right" className="max-w-xs">
-                          <p className="text-sm text-red-600">{fontValidationError}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-                  </div>
+                  <Label htmlFor="name" className="text-right">
+                    活動名稱
+                  </Label>
+                  <Input
+                    id="name"
+                    value={projectName}
+                    onChange={(e) => setProjectName(e.target.value)}
+                    className="col-span-3"
+                    placeholder="請輸入活動名稱"
+                    required
+                  />
                 </div>
+                {fontValidationError && (
+                  <div className="text-red-500 text-sm -mt-2 col-span-4 text-right">
+                    {fontValidationError}
+                  </div>
+                )}
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="projectPasscode" className="text-right">活動密碼</Label>
-                  <Input id="projectPasscode" type="password" value={projectPasscode} onChange={(e) => setProjectPasscode(e.target.value)} className="col-span-3" placeholder="設定活動存取密碼" />
+                  <Label htmlFor="passcode" className="text-right">
+                    活動密碼
+                  </Label>
+                  <Input
+                    id="passcode"
+                    type="password"
+                    value={projectPasscode}
+                    onChange={(e) => setProjectPasscode(e.target.value)}
+                    className="col-span-3"
+                    placeholder="請輸入活動密碼 (3-8位)"
+                    required
+                  />
                 </div>
               </div>
               <DialogFooter>

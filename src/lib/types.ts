@@ -24,6 +24,8 @@ export interface ProjectData {
   kiwiMaruSupported?: boolean;
   commonIncomeItems?: string[];
   commonExpenseItems?: string[];
+  createdAt?: string; // ISO string format (e.g., "2023-10-26T12:00:00.000Z")
+  updatedAt?: string; // ISO string format (e.g., "2023-10-26T12:00:00.000Z")
 }
 
 // The full project object structure
@@ -36,4 +38,6 @@ export interface Project {
   transactions: Transaction[];
   commonIncomeItems: string[];
   commonExpenseItems: string[];
+  createdAt: string; // ISO string format (e.g., "2023-10-26T12:00:00.000Z")
+  updatedAt: string; // ISO string format (e.g., "2023-10-26T12:00:00.000Z")
 }
