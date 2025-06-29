@@ -21,7 +21,7 @@ import { getProjects, getProjectById, addProject as apiAddProject, updateProject
 import { changeAdminPasscode } from '@/app/actions';
 import { projectSchema, validateFormData } from '@/lib/validation';
 
-import { PlusCircle, Edit3, Trash2, LogOut, Eye, EyeOff, FileTextIcon, AlertTriangle, LogIn, FileDown, MoreHorizontal, X, KeyRound, AlertCircle } from 'lucide-react';
+import { PlusCircle, Edit3, Trash2, LogOut, Eye, EyeOff, FileTextIcon, AlertTriangle, LogIn, FileDown, MoreHorizontal, X, KeyRound } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
@@ -87,77 +87,21 @@ export default function ProjectAdminPage() {
   const router = useRouter();
   const { toast } = useToast();
   
-  // 檢查認證狀態
+  // 檢查認證狀態 - 直接使用首頁的認證狀態
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // 在生產環境中，我們需要先確保頁面完全加載
-        if (typeof window === 'undefined') return;
-        
-        console.log('開始檢查認證狀態...');
         const savedPasscode = localStorage.getItem('admin_passcode');
-        
-        if (!savedPasscode) {
-          console.log('未找到保存的密碼，重定向到首頁');
-          router.push('/');
-          return;
-        }
-        
-        console.log('找到保存的密碼，進行驗證...');
-        
-        // 先設置為已認證，讓頁面可以渲染
-        setIsAuthenticated(true);
-        
-        // 異步驗證密碼
-        const verifyPassword = async () => {
-          try {
-            console.log('正在獲取管理員密碼...');
-            const adminPasscode = await getAdminPasscode();
-            console.log('獲取到的管理員密碼:', adminPasscode);
-            
-            if (savedPasscode !== adminPasscode) {
-              console.log('密碼不匹配，清除本地存儲並重定向');
-              localStorage.removeItem('admin_passcode');
-              setIsAuthenticated(false);
-              toast({
-                title: "登入已過期",
-                description: "請重新登入",
-                variant: "destructive"
-              });
-              router.push('/');
-            } else {
-              console.log('密碼驗證成功');
-              setIsAuthenticated(true);
-            }
-          } catch (error) {
-            console.error('密碼驗證出錯:', error);
-            // 如果獲取密碼失敗，仍然保持登入狀態
-            // 因為可能是網絡問題，而不是密碼錯誤
-          }
-        };
-        
-        // 異步驗證密碼
-        verifyPassword();
-        
+        const adminPasscode = await getAdminPasscode();
+        setIsAuthenticated(savedPasscode === adminPasscode);
       } catch (error) {
         console.error('認證檢查出錯:', error);
-        localStorage.removeItem('admin_passcode');
-        toast({
-          title: "認證錯誤",
-          description: "發生錯誤，請重新登入",
-          variant: "destructive"
-        });
-        router.push('/');
+        setIsAuthenticated(false);
       }
     };
 
-    // 添加一個小延遲，確保頁面完全加載
-    const timer = setTimeout(() => {
-      checkAuth();
-    }, 100);
-    
-    return () => clearTimeout(timer);
-  }, [router, toast]);
+    checkAuth();
+  }, []);
   
   // 處理登出
   const handleLogout = () => {
@@ -266,21 +210,21 @@ export default function ProjectAdminPage() {
       isNameSupported = fontValidation.isValid;
       
       if (!isNameSupported) {
-        // 僅顯示 toast 提示，不顯示表單錯誤
+        setFontValidationError(fontValidation.message || '活動名稱包含不支援的字元');
+        // 僅顯示警告，不阻止提交
         toast({
           title: "注意",
           description: "活動名稱包含不支援 Kiwi Maru 字型的字元，將使用預設字體顯示。",
           variant: "default",
           duration: 2000
         });
+      } else {
+        setFontValidationError(null);
       }
-      // 清除任何現有的錯誤提示
-      setFontValidationError(null);
     } catch (error) {
       console.error('字型驗證出錯:', error);
       isNameSupported = false;
-      // 發生錯誤時也不顯示錯誤提示
-      setFontValidationError(null);
+      setFontValidationError('字型驗證時發生錯誤，將使用預設字體');
     }
     
     setIsLoading(true);
@@ -415,79 +359,16 @@ export default function ProjectAdminPage() {
     }
   };
 
-  // 檢查認證狀態
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const savedPasscode = localStorage.getItem('admin_passcode');
-        if (!savedPasscode) {
-          router.push('/');
-          return;
-        }
-        
-        const adminPasscode = await getAdminPasscode();
-        const isAuth = savedPasscode === adminPasscode;
-        setIsAuthenticated(isAuth);
-        
-        // 如果未認證，導向首頁
-        if (!isAuth) {
-          router.push('/');
-        }
-      } catch (error) {
-        console.error('認證檢查出錯:', error);
-        router.push('/');
-      }
-    };
-
-    checkAuth();
-  }, [router]);
-
-  // 顯示載入中狀態
-  if (isAuthenticated === null) {
-    // 顯示加載中狀態
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p className="text-gray-600">載入中...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    // 顯示未授權訊息
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center p-6 max-w-sm w-full">
-          <div className="mb-6">
-            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">未授權訪問</h2>
-            <p className="text-gray-600 mb-6">您沒有權限訪問此頁面或登入會話已過期。</p>
-          </div>
-          <Button 
-            onClick={() => {
-              // 清除可能存在的認證狀態
-              localStorage.removeItem('admin_passcode');
-              // 重定向到首頁
-              window.location.href = '/';
-            }}
-            className="w-full"
-          >
-            返回首頁並重新登入
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   if (isLoading && projects.length === 0) {
+    return <div className="flex items-center justify-center h-screen font-body">讀取中...</div>;
+  }
+
+  // 顯示載入中
+  if (isAuthenticated === null) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p className="text-gray-600">載入中...</p>
-        </div>
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
   }

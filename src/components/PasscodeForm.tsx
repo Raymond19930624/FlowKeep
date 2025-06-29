@@ -67,14 +67,12 @@ export default function PasscodeForm() {
     const project = projects.find(p => p.id === selectedProjectId);
 
     if (project && project.passcode === passcode) {
+      router.push(`/${project.id}`);
       toast({
         title: "成功",
         description: `已成功進入活動 "${project.name}"`,
         duration: 2000
       });
-      // 先重置 loading 狀態，再進行導航
-      setIsLoading(false);
-      router.push(`/${project.id}`);
     } else {
       toast({
         title: "錯誤",
@@ -88,54 +86,26 @@ export default function PasscodeForm() {
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const passcode = adminPasscode.trim();
-    
-    if (!passcode) {
-      toast({
-        title: "錯誤",
-        description: "請輸入管理員密碼",
-        variant: "destructive",
-        duration: 2000
-      });
-      return;
-    }
-    
     setIsLoading(true);
-    
     try {
-      console.log('正在驗證管理員密碼...');
-      const isValid = await verifyAdminPasscode(passcode);
-      
+      const isValid = await verifyAdminPasscode(adminPasscode);
       if (isValid) {
-        console.log('密碼驗證成功，保存到本地存儲');
-        // 保存管理員密碼到 localStorage
-        localStorage.setItem('admin_passcode', passcode);
-        
-        // 顯示成功消息
-        toast({
-          title: "登入成功",
-          description: "正在跳轉到管理頁面...",
-          duration: 1000
-        });
-        
-        // 使用 window.location 確保完全刷新頁面
-        setTimeout(() => {
-          // 確保使用完整的 URL 進行重定向
-          const baseUrl = window.location.origin;
-          window.location.href = `${baseUrl}/admin`;
-        }, 1000);
+        router.push('/admin');
       } else {
-        throw new Error('密碼錯誤');
+        toast({
+          title: "錯誤",
+          description: "管理員密碼錯誤。",
+          variant: "destructive",
+          duration: 2000
+        });
+        setAdminPasscode('');
       }
     } catch (error) {
-      console.error('登入出錯:', error);
-      toast({
-        title: "登入失敗",
-        description: error instanceof Error ? error.message : "管理員密碼錯誤。",
+       toast({
+        title: "登入錯誤",
+        description: "驗證時發生未知錯誤。",
         variant: "destructive",
-        duration: 2000
       });
-      setAdminPasscode('');
     } finally {
       setIsLoading(false);
     }
