@@ -21,25 +21,28 @@ jobs:
         node-version: '18.x'
         cache: 'npm'
 
-    - name: Install dependencies
-      run: npm ci
+    - name: Install Vercel CLI
+      run: npm install --global vercel@latest
 
     - name: Configure Git
       run: |
         git config --global user.name 'GitHub Actions'
         git config --global user.email 'actions@github.com'
 
-    - name: Commit and push changes
+    - name: Commit changes
       run: |
         git add public/fonts/kiwi-maru-unsupported-chars.txt
         git diff --quiet && git diff --staged --quiet || \
-        (git commit -m "chore: update unsupported characters" && git push)
+        git commit -m "chore: update unsupported characters"
+
+    - name: Push changes
+      uses: ad-m/github-push-action@v0.6.0
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: main
 
     - name: Deploy to Vercel
-      uses: amondnet/vercel-action@v20
-      with:
-        vercel-token: ${{ secrets.VERCEL_TOKEN }}
-        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-        working-directory: ./
-        vercel-args: '--prod'
+      run: |
+        echo "VERCEL_ORG_ID=${{ secrets.VERCEL_ORG_ID }}" >> .env
+        echo "VERCEL_PROJECT_ID=${{ secrets.VERCEL_PROJECT_ID }}" >> .env
+        vercel --token ${{ secrets.VERCEL_TOKEN }} --prod --confirm

@@ -85,23 +85,19 @@ export async function POST(request: Request) {
       try {
         const githubToken = process.env.GITHUB_TOKEN;
         if (githubToken) {
-          const repo = 'Raymond19930624/FlowKeep';
-          const workflowId = 'update-unsupported-chars.yml';
+          // 直接提交變更到 GitHub
+          const simpleGit = require('simple-git');
+          const git = simpleGit();
           
-          await fetch(`https://api.github.com/repos/${repo}/actions/workflows/${workflowId}/dispatches`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `token ${githubToken}`,
-              'Accept': 'application/vnd.github.v3+json',
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              ref: 'main'
-            })
-          });
+          await git.add('public/fonts/kiwi-maru-unsupported-chars.txt');
+          await git.commit('chore: update unsupported characters [skip ci]');
+          await git.push('origin', 'main');
+          
+          console.log('Successfully pushed unsupported characters update to GitHub');
         }
       } catch (error) {
-        console.error('Failed to trigger GitHub Actions workflow:', error);
+        console.error('Failed to update unsupported characters:', error);
+        // 即使更新失敗，仍然繼續執行，因為這不應該影響主要功能
       }
     }
 
